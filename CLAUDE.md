@@ -2,20 +2,42 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## Monorepo overview
+
+BTV client demo sites. All clients share one Supabase project, separated by `client_slug`.
+
+```
+/                         ← repo root
+├── clients/
+│   └── kyoto/            ← standalone Next.js app (first client)
+├── shared/
+│   ├── lib/events.ts     ← canonical event emitter (source of truth)
+│   └── types/client.ts   ← shared TypeScript interfaces
+├── supabase/migrations/  ← shared DB migrations
+├── scripts/new-client.sh ← bootstrap next client
+└── README.md
+```
+
 ## Commands
 
+All commands must be run from inside a client directory:
+
 ```bash
-npm run dev      # Start dev server (http://localhost:3000)
-npm run build    # Production build
-npm run lint     # ESLint via next lint
-npm run start    # Start production server
+cd clients/kyoto
+npm run dev      # http://localhost:3000
+npm run build
+npm run lint
+npm run start
+```
+
+To scaffold a new client:
+```bash
+bash scripts/new-client.sh zoras "Zora's Seafood" "#0a1628" "#00b4d8" "Marina"
 ```
 
 No test suite is configured.
 
-## Architecture
-
-Single-page Next.js 14 App Router site for **Kyoto Asian Grille** (Wilmington, NC).
+## Kyoto client architecture (`clients/kyoto/`)
 
 ```
 app/
@@ -28,13 +50,15 @@ app/
   api/
     chat/route.ts         # Edge function — streams Claude claude-sonnet-4-20250514 responses
     reservations/route.ts # Inserts reservation rows into Supabase
+lib/
+  events.ts               # Local copy of shared/lib/events.ts (see note below)
 public/
   ref/                    # Food reference images (chicken, dessert, friedrice, soup, suschi)
 ```
 
 ### Key design decisions
 
-**All styles live in `globals.css`.** There are no CSS modules, Tailwind, or inline styled-components. The cherry blossom palette is defined as CSS custom properties in `:root` — prefer editing those vars over touching individual selectors.
+**All styles live in `globals.css`.** No CSS modules, Tailwind, or inline styled-components. The cherry blossom palette is defined as CSS custom properties in `:root` — prefer editing those vars over touching individual selectors.
 
 **`page.tsx` is a single large client component** (`'use client'`). All menu data (`MENU_ITEMS`, `MENU_CATEGORIES`, `REVIEWS`), petal config, and image-mapping logic live in that file above the component. The component owns three pieces of state: `scrolled`, `activeCat`, and `showReservation`.
 
@@ -44,19 +68,25 @@ public/
 
 **The reservations API** uses the Supabase **service-role** key (bypasses RLS) and inserts into a `reservations` table with a `client_slug: 'kyoto'` column (multi-tenant schema).
 
-### Environment variables
+## Shared layer
+
+**`shared/lib/events.ts`** is the canonical event emitter — write all analytics/tracking events through `emit()` or `emitServer()`. It inserts into `canonical_events` in Supabase. The comment `// KAFKA SWAP POINT` marks where to change the transport later.
+
+**`clients/kyoto/lib/events.ts`** is a local copy. Next.js App Router cannot import from outside the project root, so each client carries its own copy. The file header reads `// SOURCE: shared/lib/events.ts — update both if changing`.
+
+**`shared/types/client.ts`** defines `ClientConfig`, `MenuItem`, and `Reservation` interfaces — use these when adding new DB queries or API routes.
+
+## Environment variables (per client)
 
 | Variable | Purpose |
 |---|---|
-| `ANTHROPIC_API_KEY` | Powers the Yuki chatbot (`/api/chat`) |
+| `ANTHROPIC_API_KEY` | Powers the chatbot (`/api/chat`) |
 | `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anon key (used client-side if needed) |
-| `SUPABASE_SERVICE_ROLE_KEY` | Server-only; used exclusively in `/api/reservations` |
-| `NEXT_PUBLIC_CLIENT_SLUG` | `kyoto` — stored on each reservation row |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Public anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only; used in `/api/reservations` |
+| `NEXT_PUBLIC_CLIENT_SLUG` | `kyoto` — stored on every reservation and event row |
 
-### Color palette (CSS custom properties)
-
-The blossom theme is defined in `:root` in `globals.css`. Legacy variable names (`--vermilion`, `--indigo`, etc.) are aliased to the new palette so old selectors still work.
+## Color palette (CSS custom properties)
 
 | Token | Value | Role |
 |---|---|---|
@@ -70,10 +100,12 @@ The blossom theme is defined in `:root` in `globals.css`. Legacy variable names 
 | `--text-secondary` | `#b8929a` | Muted text, nav links |
 | `--border` | `rgba(232,160,176,0.15)` | Card and input borders |
 
-### Petal animation
+Legacy variable names (`--vermilion`, `--indigo`, etc.) are aliased to the new palette in `:root` so old selectors still resolve correctly.
 
-10 absolutely-positioned `.petal` divs are rendered inside `.hero` from `PETAL_CONFIG` in `page.tsx`. The `petalFall` keyframe and `.petal` base styles live in `globals.css`. Each petal receives `left`, `animationDuration`, and `animationDelay` as inline styles.
+## Petal animation
 
-### Food images on menu cards
+10 absolutely-positioned `.petal` divs rendered inside `.hero` from `PETAL_CONFIG` in `page.tsx`. The `petalFall` keyframe and `.petal` base styles are in `globals.css`. Each petal receives `left`, `animationDuration`, and `animationDelay` as inline styles.
 
-`getCategoryImage(cat, name)` in `page.tsx` maps categories/keywords → `/public/ref/*.png`. Returns `null` for categories with no matching image (appetizers without "chicken"/"gai", curries, hibachi combos, bento). The image renders as a 56×42px thumbnail in `.menu-item-right` alongside the price.
+## Food images on menu cards
+
+`getCategoryImage(cat, name)` in `page.tsx` maps categories/keywords → `/public/ref/*.png`. Returns `null` for categories with no matching image. The image renders as a 56×42px thumbnail in `.menu-item-right` alongside the price.
