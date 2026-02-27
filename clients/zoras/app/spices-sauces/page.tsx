@@ -13,7 +13,7 @@ export default function SpicesSauces() {
   return (
     <div style={{ background: "#071929", color: "#eef6fb", minHeight: "100vh", fontFamily: "system-ui, -apple-system, sans-serif" }}>
 
-      <Nav lang="en" activeKey="spices" />
+      <Nav lang="en" activeKey="menu" />
 
       {/* Hero */}
       <div style={{ background: "#0d2b45", padding: "72px 24px 64px", textAlign: "center" }}>

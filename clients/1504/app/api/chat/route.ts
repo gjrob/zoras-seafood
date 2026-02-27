@@ -78,6 +78,24 @@ export async function POST(req: NextRequest) {
   try {
     const { messages } = await req.json();
 
+    // Fire-and-forget: log chat touchpoint (edge-safe direct fetch)
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    if (supabaseUrl && serviceKey) {
+      const firstMsg = (messages as { role: string; content: string }[])
+        .find(m => m.role === 'user')?.content ?? '';
+      fetch(`${supabaseUrl}/rest/v1/customer_touchpoints`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': serviceKey,
+          'Authorization': `Bearer ${serviceKey}`,
+          'Prefer': 'return=minimal',
+        },
+        body: JSON.stringify({ client_slug: '1504', type: 'chat', message: firstMsg.substring(0, 200) }),
+      }).catch(() => {});
+    }
+
     const apiKey = process.env.ANTHROPIC_API_KEY;
     if (!apiKey) {
       return new Response("Chat's not set up yet — give us a call at (910) 555-1504 and we'll answer any questions!", {

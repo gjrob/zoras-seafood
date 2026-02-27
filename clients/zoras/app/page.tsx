@@ -7,30 +7,83 @@ import Nav from "./components/Nav";
 
 type MarketProduct = {
   category: string;
+  categorySlug: string;
   name: string;
   description: string;
-  price: string;
-  unit: string;
+  price?: string;
+  unit?: string;
   badge?: string;
+  bestFor?: string;
 };
 
 const marketProducts: MarketProduct[] = [
-  { category: "Fresh Fish", name: "Whole Flounder", description: "Local day-boat flounder, cleaned on request", price: "$8", unit: "/ lb", badge: "Local" },
-  { category: "Fresh Fish", name: "Yellowfin Tuna", description: "Sashimi-grade steaks, deep-ocean caught", price: "$22", unit: "/ lb" },
-  { category: "Fresh Fish", name: "Spanish Mackerel", description: "Ideal for grilling or smoking whole", price: "$10", unit: "/ lb", badge: "In Season" },
-  { category: "Fresh Fish", name: "Black Drum Fillets", description: "Mild, flaky NC coastal catch", price: "$12", unit: "/ lb" },
-  { category: "Fresh Fish", name: "Red Snapper Fillet", description: "Gulf-sourced, skin-on portions", price: "$18", unit: "/ lb" },
-  { category: "Shellfish & Crabs", name: "Live Blue Crab", description: "Fresh from the sound, sold by the piece", price: "$5", unit: "/ each", badge: "Local" },
-  { category: "Shellfish & Crabs", name: "Stone Crab Claws", description: "Pre-cracked & ready, served chilled", price: "$18", unit: "/ lb" },
-  { category: "Shellfish & Crabs", name: "Snow Crab Clusters", description: "Large clusters, perfect for steaming", price: "$24", unit: "/ lb" },
-  { category: "Shellfish & Crabs", name: "NC White Shrimp", description: "Fresh-caught, head-on or peeled available", price: "$12", unit: "/ lb", badge: "Local" },
-  { category: "Shellfish & Crabs", name: "Littleneck Clams", description: "Farmed from Cape Fear waters", price: "$16", unit: "/ dozen" },
-  { category: "Shellfish & Crabs", name: "Oysters", description: "Local single-cup, shucked or on the shell", price: "$18", unit: "/ dozen", badge: "In Season" },
-  { category: "Market Items", name: "Zora's Seafood Seasoning", description: "Our signature blend — great on everything", price: "$8", unit: "/ jar" },
-  { category: "Market Items", name: "Smoked Fish Dip", description: "House-smoked, 8 oz pint with crackers", price: "$10", unit: "/ pint" },
-  { category: "Market Items", name: "Cocktail Sauce", description: "Housemade with horseradish & lemon", price: "$5", unit: "/ jar" },
-  { category: "Market Items", name: "Sambal Butter", description: "Our signature steamer bag compound butter", price: "$6", unit: "/ jar" },
+  // ── Fresh Finfish ─────────────────────────────────────────────────────────
+  { category: "Fresh Finfish", categorySlug: "finfish", name: "Whole Flounder", description: "Local day-boat flounder, mild and sweet. Cleaned to order.", price: "$8", unit: "/ lb", badge: "Local", bestFor: "Pan-frying, stuffing, grilling" },
+  { category: "Fresh Finfish", categorySlug: "finfish", name: "Mahi Mahi", description: "Firm, slightly sweet flesh with a clean ocean flavor.", price: "$16", unit: "/ lb", bestFor: "Grilling, tacos, searing" },
+  { category: "Fresh Finfish", categorySlug: "finfish", name: "Cobia", description: "Rich, buttery NC coast catch — underrated and outstanding.", price: "$14", unit: "/ lb", badge: "Local", bestFor: "Sashimi, grilling, baking" },
+  { category: "Fresh Finfish", categorySlug: "finfish", name: "Triggerfish", description: "White, delicate, flaky — one of the coast's best-kept secrets.", price: "$16", unit: "/ lb", badge: "Local", bestFor: "Sautéing, frying, ceviche" },
+  { category: "Fresh Finfish", categorySlug: "finfish", name: "Spanish Mackerel", description: "Oily, bold, and ideal for grilling or smoking whole.", price: "$10", unit: "/ lb", badge: "In Season", bestFor: "Grilling, smoking, curing" },
+  { category: "Fresh Finfish", categorySlug: "finfish", name: "King Mackerel", description: "Meaty, full-flavored steaks from the Carolina coast.", price: "$11", unit: "/ lb", bestFor: "Grilling, smoking, steaks" },
+  { category: "Fresh Finfish", categorySlug: "finfish", name: "Red Snapper", description: "Firm, moist flesh with a subtly sweet, nutty flavor.", price: "$18", unit: "/ lb", bestFor: "Whole roasting, pan-frying, ceviche" },
+  { category: "Fresh Finfish", categorySlug: "finfish", name: "Vermilion Snapper", description: "Sweet, delicate flavor — a lighter alternative to red snapper.", price: "$16", unit: "/ lb", bestFor: "Sautéing, broiling, light preparations" },
+  { category: "Fresh Finfish", categorySlug: "finfish", name: "Black Drum", description: "Mild, flaky NC coastal catch with a clean, slightly sweet taste.", price: "$12", unit: "/ lb", badge: "Local", bestFor: "Blackening, baking, steaming" },
+  { category: "Fresh Finfish", categorySlug: "finfish", name: "Pompano", description: "Rich, buttery whole fish — one of the finest eating fish on the Atlantic coast.", price: "$15", unit: "/ lb", bestFor: "Whole roasting, en papillote, pan-frying" },
+  { category: "Fresh Finfish", categorySlug: "finfish", name: "Speckled Sea Trout", description: "Tender, mild local fish — excellent pan-ready portions.", price: "$13", unit: "/ lb", badge: "Local", bestFor: "Pan-frying, broiling, light seasoning" },
+  { category: "Fresh Finfish", categorySlug: "finfish", name: "Swordfish", description: "Thick, meaty steaks with a mild, slightly sweet flavor.", price: "$19", unit: "/ lb", bestFor: "Grilling, schnitzel, searing" },
+  { category: "Fresh Finfish", categorySlug: "finfish", name: "Monkfish", description: "Firm, lobster-like texture — the \"poor man's lobster.\"", price: "$14", unit: "/ lb", bestFor: "Roasting, stews, braising" },
+  { category: "Fresh Finfish", categorySlug: "finfish", name: "Sheepshead", description: "Sweet, firm local fish with a mild, almost shellfish-like flavor.", price: "$13", unit: "/ lb", badge: "Local", bestFor: "Pan-frying, baking, chowder" },
+  { category: "Fresh Finfish", categorySlug: "finfish", name: "Black Sea Bass", description: "Sustainably farmed at UNCW Aquaculture. High in protein, B12, and omega-3s.", price: "$17", unit: "/ lb", badge: "Sustainably Farmed", bestFor: "Steaming, roasting, pan-searing" },
+
+  // ── The Tuna Family ───────────────────────────────────────────────────────
+  { category: "The Tuna Family", categorySlug: "tuna", name: "Yellowfin Tuna", description: "Clean, mild, slightly sweet taste. Leaner and firmer. Bright red, versatile.", bestFor: "Searing, grilling, hearty cooked dishes" },
+  { category: "The Tuna Family", categorySlug: "tuna", name: "Bigeye Tuna", description: "Bold, buttery flavor with a slightly sweet, nutty undertone. Higher fat content. Deep reddish-pink.", bestFor: "Raw dishes, sashimi, light searing" },
+  { category: "The Tuna Family", categorySlug: "tuna", name: "Bluefin Tuna", description: "Intense marbling, extremely rich and buttery. Silky, melt-in-your-mouth texture. Deep red flesh.", badge: "Premium", bestFor: "Sushi, sashimi, lightly seared" },
+  { category: "The Tuna Family", categorySlug: "tuna", name: "Albacore Tuna", description: "Gentle, mild flavor with subtle nuttiness. Tender, almost silky texture. Pale pink to light red.", bestFor: "Light searing, salads, delicate preparations" },
+  { category: "The Tuna Family", categorySlug: "tuna", name: "Skipjack Tuna", description: "Lean, more assertive flavor. Firm texture that holds up well when cooked. Darker red flesh.", bestFor: "Cooked dishes, stews, bold preparations" },
+
+  // ── The Grouper Family ────────────────────────────────────────────────────
+  { category: "The Grouper Family", categorySlug: "grouper", name: "Gag Grouper", description: "Mild, slightly sweet flesh with tender yet firm texture. Versatile and reliable.", bestFor: "Grilling, pan-searing, blackening" },
+  { category: "The Grouper Family", categorySlug: "grouper", name: "Red Grouper", description: "Firm, moist flesh with a sweet, nutty undertone. Crowd-pleasing balance of texture and flavor.", bestFor: "Fried, sautéed, grilled, baked" },
+  { category: "The Grouper Family", categorySlug: "grouper", name: "Black Grouper", description: "Thick, moist fillets with a pronounced, buttery flavor. Rich and dense — made for bold preparations.", bestFor: "Blackening, roasting, robust stews" },
+  { category: "The Grouper Family", categorySlug: "grouper", name: "Snowy Grouper", description: "Extra-firm, dense fillets with a subtly sweet flavor hinting at mild shellfish. Elegant presentation.", bestFor: "Roasting, steaming, poaching" },
+  { category: "The Grouper Family", categorySlug: "grouper", name: "Strawberry Grouper", description: "Soft, buttery flesh with a hint of minerality and natural sweetness. Pairs beautifully with Mediterranean flavors.", bestFor: "Pan-searing, baking, gentle poaching" },
+  { category: "The Grouper Family", categorySlug: "grouper", name: "Scamp Grouper", description: "Delicate yet firm, with clean sweet flavor. A prized eating fish along the southeastern coast.", bestFor: "Pan-frying, sautéing, light preparations" },
+
+  // ── Shellfish & Crabs ─────────────────────────────────────────────────────
+  { category: "Shellfish & Crabs", categorySlug: "shellfish", name: "Live Blue Crab", description: "Fresh from the sound, sold by the piece. Cleaned on request.", price: "$5", unit: "/ each", badge: "Local" },
+  { category: "Shellfish & Crabs", categorySlug: "shellfish", name: "Stone Crab Claws", description: "Pre-cracked & ready, served chilled with mustard sauce.", price: "$18", unit: "/ lb" },
+  { category: "Shellfish & Crabs", categorySlug: "shellfish", name: "Snow Crab Clusters", description: "Large clusters, perfect for steaming or boiling.", price: "$24", unit: "/ lb" },
+  { category: "Shellfish & Crabs", categorySlug: "shellfish", name: "NC White Shrimp", description: "Fresh-caught local shrimp. Head-on or peeled available.", price: "$12", unit: "/ lb", badge: "Local" },
+  { category: "Shellfish & Crabs", categorySlug: "shellfish", name: "Atlantic Mussels", description: "Plump, briny, and tender. Perfect for steaming in white wine or broth.", price: "$7", unit: "/ lb" },
+  { category: "Shellfish & Crabs", categorySlug: "shellfish", name: "Littleneck Clams", description: "Farmed from Cape Fear waters. Sweet, clean, and fresh.", price: "$16", unit: "/ dozen" },
+  { category: "Shellfish & Crabs", categorySlug: "shellfish", name: "Crawfish", description: "Seasonal Louisiana crawfish — great for boils and étouffée.", price: "$8", unit: "/ lb", badge: "Seasonal" },
+
+  // ── Named Oysters ─────────────────────────────────────────────────────────
+  { category: "Named Oysters", categorySlug: "oysters", name: "New River Pirates", description: "Grown in the New River estuary, NC. Briny, clean, with a fresh cucumber finish.", price: "$18", unit: "/ dozen", badge: "NC Variety" },
+  { category: "Named Oysters", categorySlug: "oysters", name: "Seabirdies", description: "NC farmed single-cup oysters. Sweet, meaty, with a mild salty finish.", price: "$18", unit: "/ dozen", badge: "NC Variety" },
+
+  // ── Specialty Cuts ────────────────────────────────────────────────────────
+  { category: "Specialty Cuts", categorySlug: "specialty", name: "Fish Collars", description: "The cut behind the gills. Buttery, rich, naturally marbled. Cooks up juicy inside, crispy outside.", bestFor: "Grilling, broiling, roasting, air frying" },
+  { category: "Specialty Cuts", categorySlug: "specialty", name: "Bottarga", description: "Premium cured and dried fish roe — intensely savory, umami-rich. A true delicacy.", bestFor: "Shaved over pasta, eggs, toast" },
+  { category: "Specialty Cuts", categorySlug: "specialty", name: "Shad & Roe", description: "Seasonal spring delicacy — the roe is rich, creamy, and deeply prized.", badge: "Seasonal", bestFor: "Pan-fried in butter, simply seasoned" },
+  { category: "Specialty Cuts", categorySlug: "specialty", name: "Fish Cheeks", description: "Small, tender nuggets from the fish's face. Surprisingly rich and sweet.", bestFor: "Sautéing, quick pan-fry, ceviche" },
+
+  // ── House-Made ────────────────────────────────────────────────────────────
+  { category: "House-Made", categorySlug: "house", name: "Zora's Seafood Seasoning", description: "Our signature spice blend — great on everything from shrimp to veggies.", price: "$8", unit: "/ jar" },
+  { category: "House-Made", categorySlug: "house", name: "Smoked Fish Dip", description: "House-smoked, 8 oz pint. Served with fried crackers.", price: "$10", unit: "/ pint" },
+  { category: "House-Made", categorySlug: "house", name: "Sambal Butter", description: "Our signature steamer bag compound butter. Spicy, rich, addictive.", price: "$6", unit: "/ jar" },
+  { category: "House-Made", categorySlug: "house", name: "Cocktail Sauce", description: "Housemade with fresh horseradish and lemon. No shortcuts.", price: "$5", unit: "/ jar" },
 ];
+
+const CATEGORY_META: Record<string, { slug: string; accent: string; note?: string }> = {
+  "Fresh Finfish":      { slug: "finfish",   accent: "#3a9eca" },
+  "The Tuna Family":    { slug: "tuna",      accent: "#1a5f8a", note: "Descriptions and best-use profiles for each variety" },
+  "The Grouper Family": { slug: "grouper",   accent: "#1a5f8a", note: "Six varieties — from mild to bold" },
+  "Shellfish & Crabs":  { slug: "shellfish", accent: "#e8821a" },
+  "Named Oysters":      { slug: "oysters",   accent: "#4ab8e8", note: "Single-cup NC varieties, shucked or on the shell" },
+  "Specialty Cuts":     { slug: "specialty", accent: "#f5c518", note: "Ask the fishmonger — availability varies" },
+  "House-Made":         { slug: "house",     accent: "#e8821a" },
+};
 
 const groupedMarket = marketProducts.reduce<Record<string, MarketProduct[]>>((acc, item) => {
   acc[item.category] ??= [];
@@ -121,7 +174,7 @@ export default function Home() {
           </div>
 
           <h1 className="text-[clamp(3.5rem,13vw,8.5rem)] font-black uppercase leading-[0.9] tracking-tight drop-shadow-2xl">
-            FISHY<br />GOODNESS
+            CAUGHT TODAY.<br />COOKED TODAY.
           </h1>
 
           <p className="mt-6 text-base font-light tracking-[0.35em] text-[#a8d8f0] md:text-lg">
@@ -129,7 +182,7 @@ export default function Home() {
           </p>
 
           <div className="mt-14 grid w-full max-w-2xl grid-cols-1 gap-3 text-left sm:grid-cols-3">
-            <a href="https://maps.google.com/?q=1411+Castle+St+Wilmington+NC"
+            <a href="https://maps.google.com/?q=Zora%27s+Fresh+Seafood+Market+%26+Kitchen+1411+Castle+St+Wilmington+NC"
               target="_blank" rel="noopener noreferrer"
               className="rounded-2xl border border-white/20 bg-white/10 px-5 py-4 backdrop-blur-sm transition hover:bg-white/20">
               <p className="text-[10px] font-bold uppercase tracking-[0.35em] text-[#f5c518]">Location</p>
@@ -150,12 +203,8 @@ export default function Home() {
           </div>
 
           <div className="mt-10 flex flex-wrap items-center justify-center gap-4">
-            <a href="#menu"
-              className="rounded-xl bg-[#e8821a] px-8 py-3.5 text-sm font-bold uppercase tracking-widest text-white shadow-lg transition hover:bg-[#d05a10]">
-              View Menu
-            </a>
             <a href="#seafood"
-              className="rounded-xl border-2 border-white/30 bg-white/10 px-8 py-3.5 text-sm font-bold uppercase tracking-widest text-white backdrop-blur-sm transition hover:bg-white/20">
+              className="rounded-xl bg-[#e8821a] px-10 py-3.5 text-sm font-bold uppercase tracking-widest text-white shadow-lg transition hover:bg-[#d05a10]">
               Shop the Market
             </a>
           </div>
@@ -249,47 +298,82 @@ export default function Home() {
             <p className="text-xs font-bold uppercase tracking-[0.4em] text-[#3a9eca]">Fresh Daily</p>
             <h2 className="text-4xl font-black uppercase tracking-tight text-[#0d2b45]">Our Seafood</h2>
             <p className="mt-1 max-w-2xl text-base text-[#1a5f8a]">
-              Straight from the coast to the counter. Availability changes with the daily catch —
-              call ahead for large orders.
+              Straight from the coast to the counter. 30+ species in rotation — availability
+              changes with the daily catch. Call ahead for large orders.
             </p>
           </div>
 
-          <div className="space-y-14">
-            {Object.entries(groupedMarket).map(([category, products]) => (
-              <div key={category}>
-                <div className="mb-6 flex items-center gap-4">
-                  <h3 className="shrink-0 text-xs font-black uppercase tracking-[0.4em] text-[#e8821a]">
-                    {category}
-                  </h3>
-                  <div className="h-px w-full bg-[#0d2b45]/10" />
-                </div>
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                  {products.map((product) => (
-                    <div key={product.name}
-                      className="flex flex-col justify-between rounded-2xl border border-[#0d2b45]/10 bg-[#eef6fb] p-5 transition hover:border-[#3a9eca]/50 hover:shadow-md">
-                      <div>
-                        <div className="flex items-start justify-between gap-2">
-                          <p className="font-bold text-[#0d2b45]">{product.name}</p>
-                          {product.badge && (
-                            <span className="shrink-0 rounded-full bg-[#3a9eca]/15 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest text-[#1a5f8a]">
-                              {product.badge}
-                            </span>
+          <div className="space-y-16">
+            {Object.entries(groupedMarket).map(([category, products]) => {
+              const meta = CATEGORY_META[category];
+              return (
+                <div key={category} id={`seafood-${meta?.slug ?? category}`}>
+                  {/* Category header */}
+                  <div className="mb-6 flex flex-wrap items-center gap-4">
+                    <h3
+                      className="shrink-0 text-xs font-black uppercase tracking-[0.4em]"
+                      style={{ color: meta?.accent ?? "#e8821a" }}
+                    >
+                      {category}
+                    </h3>
+                    <div className="h-px flex-1 bg-[#0d2b45]/10" />
+                    {meta?.note && (
+                      <span className="text-[10px] italic text-[#3a9eca]">{meta.note}</span>
+                    )}
+                  </div>
+
+                  {/* Product grid */}
+                  <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+                    {products.map((product) => (
+                      <div
+                        key={product.name}
+                        className="flex flex-col justify-between rounded-2xl border border-[#0d2b45]/10 bg-[#eef6fb] p-5 transition hover:border-[#3a9eca]/50 hover:shadow-md"
+                      >
+                        <div className="flex-1">
+                          {/* Name + badge */}
+                          <div className="flex items-start justify-between gap-2">
+                            <p className="font-bold text-[#0d2b45]">{product.name}</p>
+                            {product.badge && (
+                              <span
+                                className="shrink-0 rounded-full px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-widest"
+                                style={{
+                                  background: `${meta?.accent ?? "#3a9eca"}20`,
+                                  color: meta?.accent ?? "#1a5f8a",
+                                }}
+                              >
+                                {product.badge}
+                              </span>
+                            )}
+                          </div>
+                          {/* Description */}
+                          <p className="mt-2 text-sm leading-relaxed text-[#1a5f8a]">{product.description}</p>
+                          {/* Best for */}
+                          {product.bestFor && (
+                            <p className="mt-2 text-[11px] text-[#3a9eca]">
+                              <span className="font-bold">Best for:</span> {product.bestFor}
+                            </p>
                           )}
                         </div>
-                        <p className="mt-2 text-sm text-[#1a5f8a]">{product.description}</p>
+                        {/* Price footer (only when price exists) */}
+                        {product.price && (
+                          <div className="mt-4 flex items-baseline gap-1 border-t border-[#0d2b45]/10 pt-4">
+                            <span className="text-xl font-black" style={{ color: meta?.accent ?? "#e8821a" }}>
+                              {product.price}
+                            </span>
+                            {product.unit && (
+                              <span className="text-xs text-[#3a9eca]">{product.unit}</span>
+                            )}
+                          </div>
+                        )}
                       </div>
-                      <div className="mt-4 flex items-baseline gap-1 border-t border-[#0d2b45]/10 pt-4">
-                        <span className="text-xl font-black text-[#e8821a]">{product.price}</span>
-                        <span className="text-xs text-[#3a9eca]">{product.unit}</span>
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
 
-          <div className="relative mt-14 h-56 w-full overflow-hidden rounded-3xl">
+          <div className="relative mt-16 h-56 w-full overflow-hidden rounded-3xl">
             <Image src="/zoras-crabs.webp" alt="Live blue crabs fresh from the sound" fill className="object-cover object-center" />
             <div className="absolute inset-0 bg-gradient-to-r from-[#0d2b45]/80 via-transparent to-transparent" />
             <div className="absolute inset-0 flex items-center px-8">
@@ -351,32 +435,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Spices & Sauces placeholder ───────────────────────────────────── */}
-      <section id="spices" className="w-full bg-white py-20">
-        <div className="w-full px-6 xl:px-10">
-          <p className="text-xs font-bold uppercase tracking-[0.4em] text-[#e8821a]">Shop</p>
-          <h2 className="mt-3 text-4xl font-black uppercase tracking-tight text-[#0d2b45]">
-            Zora&apos;s Spices &amp; Sauces
-          </h2>
-          <p className="mt-4 max-w-xl text-base text-[#1a5f8a]">
-            Our signature Zora&apos;s Seasoning, Sambal Butter, Cocktail Sauce, and more —
-            available at the counter and online soon.
-          </p>
-          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {marketProducts.filter(p => p.category === "Market Items").map(p => (
-              <div key={p.name} className="rounded-2xl border border-[#e8821a]/20 bg-[#fff8f0] p-5">
-                <p className="font-bold text-[#0d2b45]">{p.name}</p>
-                <p className="mt-1 text-sm text-[#1a5f8a]">{p.description}</p>
-                <div className="mt-3 flex items-baseline gap-1 border-t border-[#0d2b45]/10 pt-3">
-                  <span className="font-black text-[#e8821a]">{p.price}</span>
-                  <span className="text-xs text-[#3a9eca]">{p.unit}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
       {/* ── Visit / Contact ───────────────────────────────────────────────── */}
       <section id="order" className="w-full bg-[#0d2b45] py-20">
         <div className="w-full px-6 xl:px-10">
@@ -411,7 +469,7 @@ export default function Home() {
             <div className="overflow-hidden rounded-2xl border border-white/10">
               <iframe
                 title="Zora's Seafood Market & Kitchen Map"
-                src="https://www.google.com/maps?q=1411%20Castle%20St%20Wilmington%20NC&output=embed"
+                src="https://www.google.com/maps?q=Zora%27s+Fresh+Seafood+Market+%26+Kitchen+1411+Castle+St+Wilmington+NC&output=embed"
                 className="h-80 w-full"
                 loading="lazy"
                 referrerPolicy="no-referrer-when-downgrade"

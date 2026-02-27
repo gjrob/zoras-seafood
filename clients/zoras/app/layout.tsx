@@ -22,6 +22,10 @@ export const metadata: Metadata = {
     "Wilmington seafood restaurant",
     "fresh catch Wilmington NC",
   ],
+  icons: {
+    icon: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐟</text></svg>",
+    shortcut: "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🐟</text></svg>",
+  },
   openGraph: {
     title: "Zora's Seafood Market & Kitchen | Wilmington, NC",
     description:

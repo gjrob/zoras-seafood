@@ -139,6 +139,20 @@ export default async function Dashboard1504() {
           </div>
         </div>
 
+        {/* CUSTOMER BOOK LINK */}
+        <div style={{ marginBottom: '2.5rem' }}>
+          <a href="/dashboard/customers" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#1a0f28', border: '1px solid rgba(139,92,246,0.2)', borderRadius: '10px', padding: '1.25rem 1.5rem', textDecoration: 'none' }}>
+            <div>
+              <div style={{ fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9d8ec4', marginBottom: '0.4rem' }}>
+                CRM
+              </div>
+              <div style={{ fontSize: '1rem', fontWeight: 600, color: '#f3f0ff' }}>Customer Book</div>
+              <div style={{ fontSize: '0.72rem', color: '#9d8ec4', marginTop: '3px' }}>Guests, notes, visit history</div>
+            </div>
+            <div style={{ fontSize: '1.5rem', color: '#8b5cf6' }}>→</div>
+          </a>
+        </div>
+
         {/* PENDING RESERVATIONS */}
         <div>
           <h2 style={{ fontSize: '0.75rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#9d8ec4', marginBottom: '1rem', fontWeight: 600 }}>

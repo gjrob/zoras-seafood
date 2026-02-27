@@ -70,14 +70,11 @@ export default function Menu() {
 
       {/* Page header */}
       <div style={{ background: "#0d2b45", padding: "48px 24px 32px", textAlign: "center" }}>
-        <p style={{ color: "#4ab8e8", fontSize: "0.72rem", letterSpacing: "0.2em", fontWeight: 700, textTransform: "uppercase", margin: "0 0 12px" }}>
-          Zora&apos;s Market &amp; Kitchen
-        </p>
-        <h1 style={{ fontSize: "clamp(2.4rem, 6vw, 4rem)", fontWeight: 900, letterSpacing: "0.06em", color: "#eef6fb", margin: "0 0 16px", lineHeight: 1.1 }}>
+        <h1 style={{ fontSize: "clamp(2.4rem, 6vw, 4rem)", fontWeight: 900, letterSpacing: "0.06em", color: "#eef6fb", margin: "0 0 12px", lineHeight: 1.1 }}>
           THE MENU
         </h1>
         <p style={{ color: "#b8d8f0", fontSize: "0.95rem", maxWidth: "440px", margin: "0 auto" }}>
-          Fresh from the Carolina coast to your table
+          Made fresh daily from the Carolina coast
         </p>
       </div>
 
@@ -159,9 +156,9 @@ export default function Menu() {
           <p style={{ color: "#5a8aaa", fontSize: "0.82rem", margin: "0 0 20px" }}>Add to your steamer bag</p>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(190px, 1fr))", gap: "12px" }}>
             {(grouped["Add-Ons"] || []).map(item => (
-              <div key={item.item} style={{ background: "#0d2b45", borderRadius: "10px", padding: "18px 20px", display: "flex", flexDirection: "column", gap: "6px" }}>
-                <span style={{ color: "#f5c518", fontWeight: 900, fontSize: "1.4rem" }}>{item.price}</span>
-                <span style={{ color: "#eef6fb", fontWeight: 600, fontSize: "0.88rem", lineHeight: 1.3 }}>{item.item}</span>
+              <div key={item.item} style={{ background: "#0d2b45", borderRadius: "10px", padding: "18px 20px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span style={{ color: "#eef6fb", fontWeight: 700, fontSize: "0.88rem", lineHeight: 1.3 }}>{item.item}</span>
+                <span style={{ color: "#4ab8e8", fontWeight: 700, fontSize: "0.82rem" }}>{item.price}</span>
               </div>
             ))}
           </div>
@@ -172,9 +169,9 @@ export default function Menu() {
           <h2 style={{ fontSize: "1.3rem", fontWeight: 900, letterSpacing: "0.14em", color: "#4ab8e8", margin: "0 0 20px", paddingBottom: "10px", borderBottom: "1px solid rgba(74,184,232,0.18)" }}>SIDES</h2>
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(130px, 1fr))", gap: "10px" }}>
             {(grouped["Sides"] || []).map(item => (
-              <div key={item.item} style={{ background: "#0d2b45", borderRadius: "8px", padding: "14px 16px", display: "flex", flexDirection: "column", gap: "5px" }}>
-                <span style={{ color: "#f5c518", fontWeight: 900, fontSize: "1.1rem" }}>{item.price}</span>
-                <span style={{ color: "#eef6fb", fontSize: "0.82rem", fontWeight: 600, lineHeight: 1.3 }}>{item.item}</span>
+              <div key={item.item} style={{ background: "#0d2b45", borderRadius: "8px", padding: "14px 16px", display: "flex", flexDirection: "column", gap: "4px" }}>
+                <span style={{ color: "#eef6fb", fontSize: "0.82rem", fontWeight: 700, lineHeight: 1.3 }}>{item.item}</span>
+                <span style={{ color: "#4ab8e8", fontWeight: 700, fontSize: "0.78rem" }}>{item.price}</span>
               </div>
             ))}
           </div>
@@ -217,13 +214,10 @@ export default function Menu() {
         {/* CTA */}
         <section style={{ background: "#0d2b45", borderRadius: "14px", padding: "48px 28px", textAlign: "center", border: "1px solid rgba(245,197,24,0.18)" }}>
           <h2 style={{ fontSize: "clamp(1.4rem, 3.5vw, 2rem)", fontWeight: 900, color: "#eef6fb", margin: "0 0 10px", letterSpacing: "0.05em" }}>READY TO ORDER?</h2>
-          <p style={{ color: "#8ab8d8", fontSize: "0.9rem", margin: "0 0 32px" }}>Pick up in-store or order online for easy pickup</p>
+          <p style={{ color: "#8ab8d8", fontSize: "0.9rem", margin: "0 0 32px" }}>Come in, pick out your fish, and we&apos;ll take care of the rest</p>
           <div style={{ display: "flex", gap: "14px", justifyContent: "center", flexWrap: "wrap" }}>
             <a href="tel:9107630992" style={{ background: "#f5c518", color: "#071929", fontWeight: 900, fontSize: "0.95rem", padding: "14px 26px", borderRadius: "6px", textDecoration: "none", letterSpacing: "0.04em", display: "inline-flex", alignItems: "center", gap: "8px" }}>
-              📞 Call for Pickup — (910) 763-0992
-            </a>
-            <a href="#" style={{ background: "#1a5f8a", color: "#eef6fb", fontWeight: 800, fontSize: "0.95rem", padding: "14px 26px", borderRadius: "6px", textDecoration: "none", letterSpacing: "0.04em", border: "2px solid rgba(74,184,232,0.35)" }}>
-              Order Online
+              📞 Call for Large Orders — (910) 763-0992
             </a>
           </div>
           <p style={{ color: "#4ab8e8", fontSize: "0.75rem", margin: "24px 0 0", letterSpacing: "0.07em" }}>
