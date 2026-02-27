@@ -109,7 +109,7 @@ export default function ReservationModal({ isOpen, onClose }: Props) {
               Reserve at Seabird
             </h2>
             <p style={{ color: '#8faab0', fontSize: '0.82rem', marginTop: '6px' }}>
-              Reservations via OpenTable · (910) 769-5996
+              We'll confirm your reservation by phone · (910) 769-5996
             </p>
           </div>
 
@@ -120,8 +120,7 @@ export default function ReservationModal({ isOpen, onClose }: Props) {
                 Request Received
               </h3>
               <p style={{ color: '#8faab0', fontSize: '0.85rem', lineHeight: 1.6 }}>
-                We'll confirm your reservation by phone shortly.<br />
-                See you at Seabird.
+                Thank you! We'll call to confirm your reservation.
               </p>
               <button
                 onClick={onClose}
