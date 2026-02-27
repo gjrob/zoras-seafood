@@ -5,16 +5,17 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { FISH_CATALOG } from "../../lib/fish-data";
 
-export type ActiveKey = "home" | "about" | "menu" | "recipes" | "free-fish" | "seafood" | "facts";
+export type ActiveKey = "home" | "about" | "menu" | "recipes" | "free-fish" | "seafood" | "facts" | "join-fishlist";
 
 const PAGE_MAP: Record<ActiveKey, { en: string; es: string }> = {
-  home:        { en: "/",                 es: "/es" },
-  about:       { en: "/about",           es: "/es/about" },
-  menu:        { en: "/menu",            es: "/es/menu" },
-  recipes:     { en: "/seafood-recipes", es: "/es/seafood-recipes" },
-  "free-fish": { en: "/free-fish",       es: "/free-fish" },
-  seafood:     { en: "/seafood",         es: "/seafood" },
-  facts:       { en: "/facts",           es: "/facts" },
+  home:            { en: "/",                 es: "/es" },
+  about:           { en: "/about",           es: "/es/about" },
+  menu:            { en: "/menu",            es: "/es/menu" },
+  recipes:         { en: "/seafood-recipes", es: "/es/seafood-recipes" },
+  "free-fish":     { en: "/free-fish",       es: "/free-fish" },
+  seafood:         { en: "/seafood",         es: "/seafood" },
+  facts:           { en: "/facts",           es: "/facts" },
+  "join-fishlist": { en: "/join-fishlist",   es: "/join-fishlist" },
 };
 
 // ── Grouped fish for "Our Seafood" mega-dropdown ─────────────────────────────
@@ -198,16 +199,18 @@ export default function Nav({ lang, activeKey }: { lang: "en" | "es"; activeKey:
             </a>
           </div>
 
-          {/* Right: Free Fish + Join List + phone + lang */}
+          {/* Right: Join List + Free Fish + phone + lang */}
           <div className="flex items-center gap-2">
-            <a
-              href="https://zorasmarket.com/#join"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="rounded-lg border border-[#4ab8e8]/40 bg-[#4ab8e8]/10 px-3 py-2 text-xs font-bold uppercase tracking-wider text-[#4ab8e8] hover:bg-[#4ab8e8]/20 hover:text-white transition"
+            <Link
+              href="/join-fishlist"
+              className={`rounded-lg border px-3 py-2 text-xs font-bold uppercase tracking-wider transition ${
+                activeKey === "join-fishlist"
+                  ? "border-[#38bdf8] bg-[#38bdf8] text-white"
+                  : "border-[#38bdf8] bg-transparent text-[#38bdf8] hover:bg-[#38bdf8] hover:text-white"
+              }`}
             >
               Join the List
-            </a>
+            </Link>
             <Link href="/free-fish"
               className="rounded-lg bg-[#f5c518] px-4 py-2 text-xs font-black uppercase tracking-wider text-[#0d2b45] transition hover:bg-[#e0b310]">
               {freeFishLabel}
@@ -325,15 +328,17 @@ export default function Nav({ lang, activeKey }: { lang: "en" | "es"; activeKey:
             </a>
 
             {/* Join the List */}
-            <a
-              href="https://zorasmarket.com/#join"
-              target="_blank"
-              rel="noopener noreferrer"
+            <Link
+              href="/join-fishlist"
               onClick={() => setMobileOpen(false)}
-              className="my-1 flex items-center rounded-xl px-5 py-3 text-sm font-semibold uppercase tracking-wider text-[#4ab8e8] transition hover:bg-white/10 hover:text-white"
+              className={`my-1 flex items-center rounded-xl px-5 py-3 text-sm font-semibold uppercase tracking-wider transition ${
+                activeKey === "join-fishlist"
+                  ? "bg-[#38bdf8] text-white"
+                  : "border border-[#38bdf8]/60 text-[#38bdf8] hover:bg-[#38bdf8] hover:text-white"
+              }`}
             >
               Join the List
-            </a>
+            </Link>
 
             {/* Buttons */}
             <div className="mt-3 flex flex-col gap-2">
