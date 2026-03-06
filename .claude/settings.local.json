@@ -5,7 +5,13 @@
       "Bash(node -e \"require\\(''@supabase/supabase-js''\\)\")",
       "Bash(npm install @supabase/supabase-js)",
       "Bash(node -e \"require\\(''@supabase/supabase-js''\\); console.log\\(''OK''\\)\")",
-      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)"
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000)",
+      "Bash(npm install)",
+      "Bash(npx next build)",
+      "Bash(git add clients/zoras/public/knowus.png clients/zoras/app/join-fishlist/ clients/zoras/app/api/fishlist/ clients/zoras/app/dashboard/ clients/zoras/app/components/Nav.tsx clients/zoras/lib/crm.ts clients/zoras/package.json clients/zoras/package-lock.json)",
+      "Bash(git push origin main)",
+      "Bash(curl -L -o public/images/hero-bg.jpg \"https://eat.saltandcharm.co/wp-content/uploads/2021/03/WF095-1.jpg\" -o public/images/meals-1.jpg \"https://eat.saltandcharm.co/wp-content/uploads/2021/03/SC015.jpg\" -o public/images/meals-2.jpg \"https://eat.saltandcharm.co/wp-content/uploads/2021/03/SC018.jpg\" -o public/images/catering-1.jpg \"https://eat.saltandcharm.co/wp-content/uploads/2021/03/WF114.jpeg\" -o public/images/catering-2.jpg \"https://eat.saltandcharm.co/wp-content/uploads/2021/03/WF141.jpeg\" -o public/images/wedding.jpg \"https://eat.saltandcharm.co/wp-content/uploads/2021/03/SecWed-053-copy-1024x683.jpg\")",
+      "Bash(python3 -c \" import json, sys with open\\(''/Users/garlanjrobinson/.claude/projects/-Users-garlanjrobinson-Desktop-kyoto/b15744aa-c68e-45c3-a39a-90648f237033.jsonl''\\) as f: lines = f.readlines\\(\\) # find last user message with ''cell phone paradise'' or ''GAMEFIELD'' for i, line in enumerate\\(reversed\\(lines\\)\\): data = json.loads\\(line\\) if data.get\\(''type''\\) == ''user'': content = data.get\\(''message'', {}\\).get\\(''content'', ''''\\) if isinstance\\(content, list\\): for block in content: if isinstance\\(block, dict\\) and ''text'' in block: text = block[''text''] if ''Cell Phone'' in text or ''GAMEFIELD'' in text or ''cellphone'' in text.lower\\(\\): print\\(text[:8000]\\) sys.exit\\(0\\) elif isinstance\\(content, str\\): if ''Cell Phone'' in content or ''GAMEFIELD'' in content: print\\(content[:8000]\\) sys.exit\\(0\\) print\\(''not found in last check''\\) \")"
     ]
   }
 }

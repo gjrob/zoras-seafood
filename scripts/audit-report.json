@@ -1,0 +1,90 @@
+{
+  "clients": {
+    "1504": {
+      "bilingual": [],
+      "venueStatus": [],
+      "specialsBanner": [],
+      "dashboard": [],
+      "chatbot": [],
+      "poweredByBTV": [],
+      "seo": []
+    },
+    "_template": {
+      "bilingual": [
+        "No EN/ES toggle button found in UI"
+      ],
+      "venueStatus": [],
+      "specialsBanner": [],
+      "dashboard": [],
+      "chatbot": [
+        "Missing: app/api/chat/route.ts"
+      ],
+      "poweredByBTV": [
+        "PoweredByBTV not mounted in app/layout.tsx (must be global)"
+      ],
+      "seo": [
+        "Missing metadata export in layout.tsx",
+        "Missing openGraph in metadata",
+        "Missing twitter card in metadata",
+        "Missing JSON-LD LocalBusiness schema in page.tsx",
+        "Missing geo.region meta tag (US-NC)"
+      ]
+    },
+    "cellphoneparadise": {
+      "bilingual": [],
+      "venueStatus": [],
+      "specialsBanner": [],
+      "dashboard": [],
+      "chatbot": [],
+      "poweredByBTV": [],
+      "seo": []
+    },
+    "kyoto": {
+      "bilingual": [],
+      "venueStatus": [],
+      "specialsBanner": [],
+      "dashboard": [],
+      "chatbot": [],
+      "poweredByBTV": [],
+      "seo": []
+    },
+    "lawnlads": {
+      "bilingual": [],
+      "venueStatus": [],
+      "specialsBanner": [],
+      "dashboard": [],
+      "chatbot": [],
+      "poweredByBTV": [],
+      "seo": []
+    },
+    "popcar": {
+      "bilingual": [],
+      "venueStatus": [],
+      "specialsBanner": [],
+      "dashboard": [],
+      "chatbot": [],
+      "poweredByBTV": [],
+      "seo": []
+    },
+    "queens": {
+      "bilingual": [],
+      "venueStatus": [],
+      "specialsBanner": [],
+      "dashboard": [],
+      "chatbot": [],
+      "poweredByBTV": [],
+      "seo": []
+    },
+    "smt": {
+      "bilingual": [],
+      "venueStatus": [],
+      "specialsBanner": [],
+      "dashboard": [],
+      "chatbot": [],
+      "poweredByBTV": [],
+      "seo": []
+    }
+  },
+  "totalIssues": 8,
+  "timestamp": "2026-03-05T19:02:45.994Z"
+}

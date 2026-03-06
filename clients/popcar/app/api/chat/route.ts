@@ -1,5 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
-import { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
 
 export const runtime = 'edge'
 
@@ -45,7 +44,7 @@ Insurance Claims · General Auto Service
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages } = await req.json()
+    const { messages, lang = 'en' } = await req.json()
 
     // Fire-and-forget: log chat touchpoint
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -67,38 +66,28 @@ export async function POST(req: NextRequest) {
 
     const apiKey = process.env.ANTHROPIC_API_KEY
     if (!apiKey) {
-      return new Response("Chat isn't set up yet — call us at (910) 834-3607 and we'll answer any questions!", {
-        status: 200, headers: { 'Content-Type': 'text/plain' },
-      })
+      return NextResponse.json({ reply: "Chat isn't set up yet — call us at (910) 834-3607 and we'll answer any questions!" })
     }
 
-    const anthropic = new Anthropic({ apiKey })
-    const stream = anthropic.messages.stream({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 500,
-      system: SYSTEM_PROMPT,
-      messages: messages.map((m: { role: string; content: string }) => ({ role: m.role, content: m.content })),
-    })
-
-    const encoder = new TextEncoder()
-    const readable = new ReadableStream({
-      async start(controller) {
-        try {
-          for await (const event of stream) {
-            if (event.type === 'content_block_delta') {
-              const delta = event.delta as { type: string; text?: string }
-              if (delta.type === 'text_delta' && delta.text) controller.enqueue(encoder.encode(delta.text))
-            }
-          }
-          controller.close()
-        } catch { controller.close() }
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
       },
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 500,
+        system: SYSTEM_PROMPT,
+        messages: messages.map((m: { role: string; content: string }) => ({ role: m.role, content: m.content })),
+      }),
     })
 
-    return new Response(readable, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache' } })
+    const data = await res.json()
+    const text = data.content?.[0]?.text ?? "Sorry, call us at (910) 834-3607!"
+    return NextResponse.json({ reply: text })
   } catch {
-    return new Response('Sorry, having trouble. Call us at (910) 834-3607!', {
-      status: 200, headers: { 'Content-Type': 'text/plain' },
-    })
+    return NextResponse.json({ reply: 'Sorry, having trouble. Call us at (910) 834-3607!' })
   }
 }

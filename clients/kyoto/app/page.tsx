@@ -1,7 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { createClient } from '@supabase/supabase-js';
 import ReservationModal from './components/ReservationModal';
+import { OrderButton } from './components/OrderButton';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 /* ─── MENU DATA ─── */
 const MENU_CATEGORIES = [
@@ -122,14 +129,28 @@ function getCategoryImage(cat: string, name: string): string | null {
 }
 
 export default function Home() {
+  const [lang, setLang] = useState<'en' | 'es'>('en');
   const [scrolled, setScrolled] = useState(false);
   const [activeCat, setActiveCat] = useState('All');
   const [showReservation, setShowReservation] = useState(false);
+  const [specials, setSpecials] = useState('');
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 60);
     window.addEventListener('scroll', onScroll);
-    return () => window.removeEventListener('scroll', onScroll);
+
+    supabase.from('venue_status').select('specials_text').eq('client_slug', 'kyoto').single()
+      .then(({ data }) => { if (data?.specials_text) setSpecials(data.specials_text) });
+
+    const channel = supabase.channel('kyoto-venue')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'venue_status', filter: 'client_slug=eq.kyoto' },
+        ({ new: next }) => setSpecials((next as { specials_text: string }).specials_text || ''))
+      .subscribe();
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const filtered = activeCat === 'All' ? MENU_ITEMS : MENU_ITEMS.filter(i => i.cat === activeCat);
@@ -149,9 +170,21 @@ export default function Home() {
               Reservations
             </button>
           </li>
-          <li><a href="https://kyotoasiangrille.cloveronline.com/" target="_blank" rel="noopener" className="nav-cta">Order Online</a></li>
+          <li><OrderButton /></li>
+          <li>
+            <button onClick={() => setLang(l => l === 'en' ? 'es' : 'en')} style={{ background: 'none', border: '1px solid rgba(232,160,176,0.3)', color: '#b8929a', cursor: 'pointer', fontSize: '11px', letterSpacing: '0.1em', fontFamily: 'inherit', padding: '4px 10px', borderRadius: '3px' }}>
+              {lang === 'en' ? 'ES' : 'EN'}
+            </button>
+          </li>
         </ul>
       </nav>
+
+      {/* SPECIALS BANNER */}
+      {specials && (
+        <div style={{ background: '#c9a84c', color: '#0d0a0e', textAlign: 'center', padding: '10px 24px', fontSize: '13px', fontWeight: 600, letterSpacing: '0.05em' }}>
+          ✨ {specials}
+        </div>
+      )}
 
       {/* HERO */}
       <section className="hero">
@@ -181,9 +214,7 @@ export default function Home() {
             </div>
           </div>
           <div className="hero-ctas">
-            <a href="https://kyotoasiangrille.cloveronline.com/" target="_blank" rel="noopener" className="btn-primary">
-              🥢 Order Online
-            </a>
+            <OrderButton />
             <a href="#menu" className="btn-secondary">
               View Full Menu
             </a>
@@ -288,6 +319,26 @@ export default function Home() {
               const itemImg = getCategoryImage(item.cat, item.name);
               return (
                 <div className="menu-item" key={i}>
+      <script
+              type="application/ld+json"
+              dangerouslySetInnerHTML={{
+                __html: JSON.stringify({
+                  '@context': 'https://schema.org',
+                  '@type': 'Restaurant',
+                  name: 'Kyoto Asian Grille',
+                  address: {
+                    '@type': 'PostalAddress',
+                    streetAddress: '4102 Market Street',
+                    addressLocality: 'Wilmington',
+                    addressRegion: 'NC',
+                    addressCountry: 'US',
+                  },
+                  telephone: '(910) 332-3302',
+                  url: 'https://kyotoasiangrille.com',
+                })
+              }}
+            />
+
                   <div className="menu-item-text">
                     <div className="menu-item-name">{item.name}</div>
                     {item.desc && <div className="menu-item-desc">{item.desc}</div>}
@@ -303,9 +354,7 @@ export default function Home() {
           </div>
 
           <div style={{ textAlign: 'center', marginTop: '2.5rem' }}>
-            <a href="https://kyotoasiangrille.cloveronline.com/" target="_blank" rel="noopener" className="btn-primary">
-              🥢 Order Online Now
-            </a>
+            <OrderButton />
           </div>
         </div>
       </section>
@@ -382,7 +431,7 @@ export default function Home() {
           {' · '}
           <a href="https://www.facebook.com/KyotoAsianGrille" target="_blank" rel="noopener">Facebook</a>
           {' · '}
-          <a href="https://kyotoasiangrille.cloveronline.com/" target="_blank" rel="noopener">Order Online</a>
+          <OrderButton />
         </p>
       </footer>
     </>

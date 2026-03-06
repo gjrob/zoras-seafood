@@ -1,3 +1,4 @@
+import PoweredByBTV from './components/PoweredByBTV'
 import type { Metadata } from 'next';
 import './globals.css';
 import ChatBot from './components/ChatBot';
@@ -11,6 +12,15 @@ export const metadata: Metadata = {
     description: 'Where the kitchen closes at 10 and the bar never rushes you.',
     type: 'website',
   },
+  twitter: {
+    card: 'summary_large_image',
+    title: '1504 Resto-Bar — Wilmington, NC',
+    description: 'Where the kitchen closes at 10 and the bar never rushes you.',
+  },
+  other: {
+    'geo.region': 'US-NC',
+    'geo.placename': 'Wilmington, North Carolina',
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -19,6 +29,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body>
         {children}
         <ChatBot />
+        <PoweredByBTV />
       </body>
     </html>
   );

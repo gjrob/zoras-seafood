@@ -1,159 +1,278 @@
+'use client'
+import { useEffect, useState } from 'react'
 import { createClient } from '@supabase/supabase-js'
 
-export const dynamic = 'force-dynamic'
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
+)
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function getStats(supabase: any) {
-  const now = new Date()
-  const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString()
-  const monthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString()
+const LEADS_TABLE = 'popcar_bookings'
+const CLIENT_SLUG = 'popcar'
+const ACCENT = '#ff3333'
+const ACCENT_TEXT = '#ffffff'
 
-  const [resWeek, resMonth, chatWeek, totalCustomers, pending] = await Promise.all([
-    supabase
-      .from('reservations').select('*', { count: 'exact', head: true })
-      .eq('client_slug', 'popcar').gte('created_at', weekAgo),
-    supabase
-      .from('reservations').select('*', { count: 'exact', head: true })
-      .eq('client_slug', 'popcar').gte('created_at', monthAgo),
-    supabase
-      .from('canonical_events').select('*', { count: 'exact', head: true })
-      .eq('client_slug', 'popcar').eq('event_type', 'chat.message').gte('occurred_at', weekAgo),
-    supabase
-      .from('customers').select('*', { count: 'exact', head: true })
-      .eq('client_slug', 'popcar'),
-    supabase
-      .from('reservations').select('*')
-      .eq('client_slug', 'popcar').eq('status', 'pending')
-      .order('created_at', { ascending: false }).limit(15),
-  ])
-
-  return {
-    appointmentsWeek: resWeek.count ?? 0,
-    appointmentsMonth: resMonth.count ?? 0,
-    chatWeek: chatWeek.count ?? 0,
-    totalCustomers: totalCustomers.count ?? 0,
-    pendingAppointments: pending.data ?? [],
-  }
+interface Lead {
+  id: string
+  name: string
+  phone?: string
+  service?: string
+  date_requested?: string
+  status: string
+  created_at: string
 }
 
-export default async function PopCarDashboard() {
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+interface NurtureMessage {
+  id: string
+  lead_name: string
+  phone: string
+  sequence_step: number
+  status: string
+  channel: string
+  scheduled_at: string
+}
 
-  if (!url || !key || url.includes('placeholder')) {
-    return (
-      <main style={{ background: '#0a0a0a', minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui, sans-serif' }}>
-        <div style={{ color: '#666', textAlign: 'center' }}>
-          <p>Dashboard not configured.</p>
-          <p style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>Set SUPABASE_SERVICE_ROLE_KEY in .env.local</p>
-        </div>
-      </main>
-    )
+function NurtureTab() {
+  const [queue, setQueue] = useState<NurtureMessage[]>([])
+  const [stats, setStats] = useState({ pending: 0, sent: 0, failed: 0, opted_out: 0 })
+
+  useEffect(() => {
+    supabase
+      .from('nurture_queue')
+      .select('*')
+      .eq('client_slug', CLIENT_SLUG)
+      .order('scheduled_at', { ascending: false })
+      .limit(100)
+      .then(({ data }) => {
+        if (data) {
+          setQueue(data)
+          setStats({
+            pending:   data.filter(m => m.status === 'pending').length,
+            sent:      data.filter(m => m.status === 'sent').length,
+            failed:    data.filter(m => m.status === 'failed').length,
+            opted_out: data.filter(m => m.status === 'opted_out').length,
+          })
+        }
+      })
+  }, [])
+
+  const statusColor: Record<string, string> = {
+    pending: '#ffaa00', sent: ACCENT, failed: '#ff4444', opted_out: '#6b7a8d',
   }
 
-  const supabase = createClient(url, key)
-  const stats = await getStats(supabase)
-
-  const statCards = [
-    { label: 'Appointments', sub: 'This Week',  value: stats.appointmentsWeek,  accent: '#cc0000' },
-    { label: 'Appointments', sub: 'This Month', value: stats.appointmentsMonth, accent: '#cc0000' },
-    { label: 'Chatbot Conversations', sub: 'This Week', value: stats.chatWeek,  accent: '#4ade80' },
-    { label: 'Total Customers', sub: 'All Time', value: stats.totalCustomers,   accent: '#f5c518' },
-  ]
-
   return (
-    <main style={{ background: '#0a0a0a', minHeight: '100vh', fontFamily: "'Inter', system-ui, sans-serif", color: '#ffffff', padding: '0 0 4rem' }}>
-      {/* HEADER */}
-      <header style={{ borderBottom: '1px solid rgba(204,0,0,0.2)', padding: '1.5rem 2rem', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', flexWrap: 'wrap', gap: '0.5rem' }}>
-        <div>
-          <h1 style={{ fontSize: '1.1rem', fontWeight: 700, color: '#ffffff', margin: 0 }}>
-            <span style={{ color: '#cc0000' }}>Pop Car</span> Auto Center · Owner Dashboard
-          </h1>
-          <p style={{ fontSize: '0.72rem', color: '#666', marginTop: '4px', letterSpacing: '0.05em' }}>
-            Updated in real time · Powered by BlueTubeTV
-          </p>
-        </div>
-        <div style={{ fontSize: '0.7rem', color: '#666', textAlign: 'right' }}>
-          <div>1301 Dawson St · Wilmington, NC</div>
-          <div style={{ marginTop: '2px' }}>(910) 834-3607</div>
-        </div>
-      </header>
-
-      <div style={{ padding: '2rem' }}>
-        {/* STAT CARDS */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-          {statCards.map((card, i) => (
-            <div key={i} style={{ background: '#111', border: '1px solid rgba(204,0,0,0.2)', borderRadius: '10px', padding: '1.25rem 1.5rem' }}>
-              <div style={{ fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#666', marginBottom: '0.5rem' }}>
-                {card.label}<br /><span style={{ color: card.accent, fontSize: '0.6rem' }}>{card.sub}</span>
-              </div>
-              <div style={{ fontSize: '2.2rem', fontWeight: 700, color: card.accent, lineHeight: 1 }}>
-                {card.value.toLocaleString()}
-              </div>
+    <div style={{ margin: '24px 32px 48px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4,1fr)', gap: '1px', background: '#1a2332', marginBottom: '24px' }}>
+        {[
+          { label: 'PENDING',  value: stats.pending,   color: '#ffaa00' },
+          { label: 'SENT',     value: stats.sent,      color: ACCENT },
+          { label: 'FAILED',   value: stats.failed,    color: '#ff4444' },
+          { label: 'OPT-OUT',  value: stats.opted_out, color: '#6b7a8d' },
+        ].map(s => (
+          <div key={s.label} style={{ background: '#080b0f', padding: '20px 24px' }}>
+            <div style={{ fontSize: '10px', color: '#6b7a8d', letterSpacing: '.1em' }}>{s.label}</div>
+            <div style={{ fontSize: '40px', fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: '10px', color: ACCENT, letterSpacing: '.15em', marginBottom: '12px' }}>// NURTURE QUEUE</div>
+      {queue.length === 0 ? (
+        <div style={{ color: '#6b7a8d', padding: '48px', textAlign: 'center', border: '1px solid #1a2332' }}>NO MESSAGES QUEUED YET</div>
+      ) : (
+        <div style={{ border: '1px solid #1a2332' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 80px 60px 90px', padding: '10px 16px', background: '#0f1419', fontSize: '10px', color: '#6b7a8d', letterSpacing: '.1em', borderBottom: '1px solid #1a2332' }}>
+            <span>NAME</span><span>SCHEDULED</span><span>STEP</span><span>CH</span><span>STATUS</span>
+          </div>
+          {queue.map((msg, i) => (
+            <div key={msg.id} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 80px 60px 90px', padding: '12px 16px', fontSize: '12px', borderBottom: i < queue.length - 1 ? '1px solid #0d1117' : 'none', background: i % 2 === 0 ? '#080b0f' : '#0a0e13', alignItems: 'center' }}>
+              <span style={{ color: '#f0f4f8', fontWeight: 600 }}>{msg.lead_name}</span>
+              <span style={{ color: '#6b7a8d' }}>{new Date(msg.scheduled_at).toLocaleDateString()}</span>
+              <span style={{ color: '#6b7a8d' }}>Step {msg.sequence_step}</span>
+              <span style={{ color: '#6b7a8d' }}>{msg.channel.toUpperCase()}</span>
+              <span style={{ color: statusColor[msg.status] || '#666' }}>{msg.status.toUpperCase().replace('_', '-')}</span>
             </div>
           ))}
         </div>
+      )}
+    </div>
+  )
+}
 
-        {/* CUSTOMER BOOK LINK */}
-        <div style={{ marginBottom: '2.5rem' }}>
-          <a href="/dashboard/customers" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#1a0000', border: '1px solid rgba(204,0,0,0.3)', borderRadius: '10px', padding: '1.25rem 1.5rem', textDecoration: 'none' }}>
-            <div>
-              <div style={{ fontSize: '0.65rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#666', marginBottom: '0.4rem' }}>CRM</div>
-              <div style={{ fontSize: '1rem', fontWeight: 600, color: '#ffffff' }}>Customer Book</div>
-              <div style={{ fontSize: '0.72rem', color: '#666', marginTop: '3px' }}>Customers, notes, visit history</div>
-            </div>
-            <div style={{ fontSize: '1.5rem', color: '#cc0000' }}>→</div>
-          </a>
-        </div>
+export default function Dashboard() {
+  const [leads, setLeads] = useState<Lead[]>([])
+  const [stats, setStats] = useState({ today: 0, week: 0, total: 0 })
+  const [loading, setLoading] = useState(true)
+  const [overlayActive, setOverlayActive] = useState(false)
+  const [overlayMsg, setOverlayMsg] = useState('')
+  const [activeTab, setActiveTab] = useState<'leads' | 'nurture'>('leads')
 
-        {/* PENDING APPOINTMENTS */}
+  useEffect(() => {
+    fetchLeads()
+    fetchVenueStatus()
+    const sub = supabase.channel('popcar-leads')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: LEADS_TABLE },
+        (payload) => {
+          setLeads(prev => [payload.new as Lead, ...prev])
+          setStats(prev => ({ ...prev, today: prev.today + 1, total: prev.total + 1 }))
+        })
+      .subscribe()
+    return () => { supabase.removeChannel(sub) }
+  }, [])
+
+  async function fetchVenueStatus() {
+    const { data } = await supabase.from('venue_status').select('is_open,specials_text').eq('client_slug', CLIENT_SLUG).single()
+    if (data) {
+      setOverlayActive(data.is_open)
+      setOverlayMsg(data.specials_text || '')
+    }
+  }
+
+  async function fetchLeads() {
+    const { data } = await supabase.from(LEADS_TABLE).select('*').order('created_at', { ascending: false }).limit(200)
+    if (data) {
+      setLeads(data)
+      const today = new Date().toDateString()
+      const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
+      setStats({
+        today: data.filter(l => new Date(l.created_at).toDateString() === today).length,
+        week: data.filter(l => new Date(l.created_at) >= weekAgo).length,
+        total: data.length,
+      })
+    }
+    setLoading(false)
+  }
+
+  async function updateStatus(id: string, status: string) {
+    await supabase.from(LEADS_TABLE).update({ status }).eq('id', id)
+    setLeads(prev => prev.map(l => l.id === id ? { ...l, status } : l))
+  }
+
+  function exportCSV() {
+    if (!leads.length) return
+    const headers = Object.keys(leads[0]).join(',')
+    const rows = leads.map(l => Object.values(l).map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')
+    const blob = new Blob([headers + '\n' + rows], { type: 'text/csv' })
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob)
+    a.download = `popcar-leads-${new Date().toISOString().split('T')[0]}.csv`; a.click()
+  }
+
+  const statusColor = (s: string) => (
+    ({ pending: '#ffaa00', confirmed: '#39ff14', completed: '#00d4ff', cancelled: '#ff4444' } as Record<string, string>)[s] || '#666'
+  )
+
+  const tabStyle = (tab: 'leads' | 'nurture') => ({
+    padding: '10px 28px',
+    cursor: 'pointer' as const,
+    fontFamily: 'monospace',
+    fontSize: '11px',
+    letterSpacing: '.1em',
+    fontWeight: 700,
+    border: 'none',
+    background: 'transparent',
+    color: activeTab === tab ? ACCENT : '#6b7a8d',
+    borderBottom: activeTab === tab ? `2px solid ${ACCENT}` : '2px solid transparent',
+  })
+
+  return (
+    <div style={{ minHeight: '100vh', background: '#080b0f', color: '#f0f4f8', fontFamily: 'monospace' }}>
+      {/* Header */}
+      <div style={{ borderBottom: `2px solid ${ACCENT}`, padding: '16px 32px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div>
-          <h2 style={{ fontSize: '0.75rem', letterSpacing: '0.12em', textTransform: 'uppercase', color: '#666', marginBottom: '1rem', fontWeight: 600 }}>
-            Pending Appointments
-          </h2>
-          {stats.pendingAppointments.length === 0 ? (
-            <div style={{ background: '#111', border: '1px solid rgba(204,0,0,0.15)', borderRadius: '10px', padding: '2rem', textAlign: 'center', color: '#666', fontSize: '0.85rem' }}>
-              No pending appointments
-            </div>
-          ) : (
-            <div style={{ background: '#111', border: '1px solid rgba(204,0,0,0.15)', borderRadius: '10px', overflow: 'hidden' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.82rem' }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid rgba(204,0,0,0.15)' }}>
-                    {['Name', 'Phone', 'Service / Vehicle', 'Date', 'Time', 'Status'].map(h => (
-                      <th key={h} style={{ padding: '0.75rem 1rem', textAlign: 'left', color: '#666', fontWeight: 600, fontSize: '0.65rem', letterSpacing: '0.08em', textTransform: 'uppercase' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
-                  {stats.pendingAppointments.map((r: any) => (
-                    <tr key={r.id} style={{ borderBottom: '1px solid rgba(204,0,0,0.07)' }}>
-                      <td style={{ padding: '0.75rem 1rem', color: '#fff' }}>{r.name}</td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#999' }}>{r.phone}</td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#999', maxWidth: '200px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{r.notes || '—'}</td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#fff' }}>{r.date || '—'}</td>
-                      <td style={{ padding: '0.75rem 1rem', color: '#fff' }}>{r.time || '—'}</td>
-                      <td style={{ padding: '0.75rem 1rem' }}>
-                        <span style={{ padding: '3px 10px', borderRadius: '12px', fontSize: '0.65rem', fontWeight: 600, letterSpacing: '0.06em', background: 'rgba(245,197,24,0.1)', color: '#f5c518', border: '1px solid rgba(245,197,24,0.3)' }}>
-                          PENDING
-                        </span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <div style={{ fontSize: '10px', color: ACCENT, letterSpacing: '.15em' }}>// DASHBOARD</div>
+          <div style={{ fontSize: '22px', fontWeight: 700, letterSpacing: '.05em' }}>POP CAR AUTO CENTER</div>
         </div>
+        <button onClick={exportCSV} style={{ background: 'transparent', border: `1px solid ${ACCENT}`, color: ACCENT, padding: '8px 20px', cursor: 'pointer', fontFamily: 'monospace', fontSize: '11px', letterSpacing: '.1em' }}>
+          EXPORT CSV
+        </button>
       </div>
 
-      {/* FOOTER */}
-      <footer style={{ textAlign: 'center', padding: '1.5rem', borderTop: '1px solid rgba(204,0,0,0.1)', marginTop: '3rem' }}>
-        <p style={{ color: '#444', fontSize: '0.7rem', letterSpacing: '0.08em' }}>
-          BlueTubeTV · Blue Ring Holdings LLC
-        </p>
-      </footer>
-    </main>
+      {/* Tab bar */}
+      <div style={{ borderBottom: '1px solid #1a2332', display: 'flex', padding: '0 32px' }}>
+        <button onClick={() => setActiveTab('leads')} style={tabStyle('leads')}>LEADS</button>
+        <button onClick={() => setActiveTab('nurture')} style={tabStyle('nurture')}>NURTURE</button>
+      </div>
+
+      {activeTab === 'leads' ? (
+        <>
+          {/* Stats */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: '1px', background: '#1a2332' }}>
+            {[{ label: 'TODAY', value: stats.today }, { label: 'THIS WEEK', value: stats.week }, { label: 'ALL TIME', value: stats.total }].map(s => (
+              <div key={s.label} style={{ background: '#080b0f', padding: '28px 32px' }}>
+                <div style={{ fontSize: '10px', color: '#6b7a8d', letterSpacing: '.1em', marginBottom: '8px' }}>{s.label}</div>
+                <div style={{ fontSize: '56px', fontWeight: 700, color: ACCENT, lineHeight: 1 }}>{s.value}</div>
+                <div style={{ fontSize: '10px', color: '#6b7a8d', marginTop: '4px' }}>PIT STOPS</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Overlay Control */}
+          <div style={{ margin: '24px 32px', border: '1px solid #1a2332', padding: '20px' }}>
+            <div style={{ fontSize: '10px', color: ACCENT, letterSpacing: '.15em', marginBottom: '12px' }}>// OVERLAY CONTROL</div>
+            <div style={{ display: 'flex', gap: '12px' }}>
+              <input
+                value={overlayMsg}
+                onChange={e => setOverlayMsg(e.target.value)}
+                placeholder="e.g. Free diagnostics today — call (910) 834-3607"
+                style={{ flex: 1, background: '#0f1419', border: '1px solid #1a2332', color: '#f0f4f8', padding: '10px 16px', fontFamily: 'monospace', fontSize: '13px', outline: 'none' }}
+              />
+              <button
+                onClick={async () => {
+                  const next = !overlayActive
+                  setOverlayActive(next)
+                  await supabase.from('venue_status').upsert(
+                    { client_slug: CLIENT_SLUG, is_open: next, specials_text: overlayMsg },
+                    { onConflict: 'client_slug' }
+                  )
+                }}
+                style={{ background: overlayActive ? '#ff4444' : ACCENT, color: overlayActive ? '#fff' : ACCENT_TEXT, border: 'none', padding: '10px 28px', cursor: 'pointer', fontFamily: 'monospace', fontWeight: 700, fontSize: '12px', letterSpacing: '.1em' }}
+              >
+                {overlayActive ? 'STOP' : 'GO LIVE'}
+              </button>
+            </div>
+            {overlayActive && (
+              <div style={{ marginTop: '12px', padding: '10px 16px', background: `rgba(255,51,51,.05)`, border: `1px solid ${ACCENT}`, fontSize: '12px', color: ACCENT }}>
+                ● LIVE — &quot;{overlayMsg || 'No message set'}&quot;
+              </div>
+            )}
+          </div>
+
+          {/* Leads */}
+          <div style={{ margin: '0 32px 48px' }}>
+            <div style={{ fontSize: '10px', color: ACCENT, letterSpacing: '.15em', marginBottom: '12px' }}>// BOOKINGS — REAL TIME</div>
+            {loading ? (
+              <div style={{ color: '#6b7a8d', padding: '48px', textAlign: 'center' }}>LOADING...</div>
+            ) : leads.length === 0 ? (
+              <div style={{ color: '#6b7a8d', padding: '48px', textAlign: 'center', border: '1px solid #1a2332' }}>NO BOOKINGS YET</div>
+            ) : (
+              <div style={{ border: '1px solid #1a2332' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1.5fr 1fr 1fr', padding: '10px 16px', background: '#0f1419', fontSize: '10px', color: '#6b7a8d', letterSpacing: '.1em', borderBottom: '1px solid #1a2332' }}>
+                  <span>NAME</span><span>PHONE</span><span>SERVICE</span><span>DATE REQUESTED</span><span>STATUS</span>
+                </div>
+                {leads.map((lead, i) => (
+                  <div key={lead.id} style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr 1.5fr 1fr 1fr', padding: '14px 16px', fontSize: '12px', borderBottom: i < leads.length - 1 ? '1px solid #0d1117' : 'none', background: i % 2 === 0 ? '#080b0f' : '#0a0e13' }}>
+                    <span style={{ fontWeight: 600, color: '#f0f4f8' }}>{lead.name}</span>
+                    <span style={{ color: '#6b7a8d' }}>{lead.phone || '—'}</span>
+                    <span style={{ color: '#6b7a8d' }}>{lead.service || '—'}</span>
+                    <span style={{ color: '#6b7a8d' }}>{lead.date_requested || '—'}</span>
+                    <select
+                      value={lead.status}
+                      onChange={e => updateStatus(lead.id, e.target.value)}
+                      style={{ background: '#0f1419', border: `1px solid ${statusColor(lead.status)}`, color: statusColor(lead.status), padding: '4px 8px', fontSize: '10px', fontFamily: 'monospace', cursor: 'pointer' }}
+                    >
+                      <option value="pending">PENDING</option>
+                      <option value="confirmed">CONFIRMED</option>
+                      <option value="completed">COMPLETED</option>
+                      <option value="cancelled">CANCELLED</option>
+                    </select>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      ) : (
+        <NurtureTab />
+      )}
+    </div>
   )
 }

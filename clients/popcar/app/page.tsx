@@ -1,327 +1,755 @@
 'use client'
 
-import { useState, useEffect, createContext, useContext } from 'react'
+import { useState, useEffect } from 'react'
 import { createClient } from '@supabase/supabase-js'
-import AppointmentModal from './components/AppointmentModal'
-import LiveStatusBadge from './components/LiveStatusBadge'
-import SpecialsBanner from './components/SpecialsBanner'
 
-// ── Language Context ──────────────────────────────────────────────────────────
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://placeholder.supabase.co',
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'placeholder'
+)
+
 type Lang = 'en' | 'es'
-const LangContext = createContext<{ lang: Lang; setLang: (l: Lang) => void }>({
-  lang: 'en', setLang: () => {},
-})
 const t = (en: string, es: string, lang: Lang) => lang === 'es' ? es : en
 
-// ── Services ──────────────────────────────────────────────────────────────────
+// ── Services data ──────────────────────────────────────────────────────────────
 const SERVICES = [
-  { icon: '🔧', en: 'Auto Service',        es: 'Servicio General',          desc_en: 'Full-service maintenance and repairs for all makes and models.', desc_es: 'Mantenimiento y reparaciones completas para todas las marcas.' },
-  { icon: '🔩', en: 'Engine Repair',        es: 'Reparación de Motor',       desc_en: 'Diagnostics and engine repair from minor to major overhaul.', desc_es: 'Diagnósticos y reparación de motor, desde menores hasta mayores.' },
-  { icon: '🛑', en: 'Brake Service',        es: 'Servicio de Frenos',        desc_en: 'Pad replacement, rotor resurfacing, brake fluid flush.', desc_es: 'Cambio de pastillas, rectificado de rotores, purga de frenos.' },
-  { icon: '📋', en: 'Insurance Claims',     es: 'Reclamaciones de Seguro',   desc_en: 'We work directly with your insurance company for claims.', desc_es: 'Trabajamos directamente con tu seguro para reclamaciones.' },
-  { icon: '🎨', en: 'Paint & Restoration',  es: 'Pintura y Restauración',    desc_en: 'Color-matched paint, dent repair, and full body restoration.', desc_es: 'Pintura igualada, reparación de abolladuras y restauración.' },
-  { icon: '🛢️', en: 'Oil Change',           es: 'Cambio de Aceite',          desc_en: 'Conventional and synthetic oil changes with multi-point inspection.', desc_es: 'Cambios convencionales y sintéticos con inspección multipunto.' },
-  { icon: '⚠️', en: 'Check Engine',         es: 'Diagnóstico',               desc_en: 'Computer diagnostics to identify and clear engine codes.', desc_es: 'Diagnóstico computarizado para identificar y borrar códigos.' },
-  { icon: '⚙️', en: 'Transmission',         es: 'Transmisión',               desc_en: 'Automatic and manual transmission repair and fluid service.', desc_es: 'Reparación de transmisión automática y manual, servicio de fluidos.' },
-  { icon: '🔄', en: 'Suspension',           es: 'Suspensión',                desc_en: 'Shocks, struts, alignment, and full suspension diagnostics.', desc_es: 'Amortiguadores, alineación y diagnóstico completo de suspensión.' },
-  { icon: '🔘', en: 'Tires',               es: 'Llantas',                   desc_en: 'Tire sales, mounting, balancing, rotation, and flat repair.', desc_es: 'Venta, montaje, balanceo, rotación y reparación de llantas.' },
+  { name: 'Oil Change',       nameEs: 'Cambio de Aceite',        desc: 'Synthetic oil + filter',           descEs: 'Aceite sintético + filtro',              price: '$49.99+',  category: 'MAINTENANCE', level: 1, icon: '🛢️' },
+  { name: 'Tire Rotation',    nameEs: 'Rotación de Llantas',     desc: 'Rotate & balance all four',         descEs: 'Rotar y balancear las cuatro',           price: '$25.00+',  category: 'TIRES',       level: 1, icon: '🔄' },
+  { name: 'New Tires',        nameEs: 'Llantas Nuevas',          desc: 'Used & new available',              descEs: 'Usadas y nuevas disponibles',            price: 'CALL',     category: 'TIRES',       level: 2, icon: '⚫' },
+  { name: 'Brake Service',    nameEs: 'Servicio de Frenos',      desc: 'Pads, rotors, inspection',          descEs: 'Pastillas, rotores, inspección',         price: '$89.99+',  category: 'BRAKES',      level: 3, icon: '🔴' },
+  { name: 'Check Engine',     nameEs: 'Diagnóstico',             desc: 'Full diagnostic scan',              descEs: 'Diagnóstico completo',                   price: 'FREE*',    category: 'DIAGNOSTICS', level: 2, icon: '⚠️' },
+  { name: 'Engine Repair',    nameEs: 'Reparación de Motor',     desc: 'Full diagnosis & repair',           descEs: 'Diagnóstico y reparación completa',      price: 'CALL',     category: 'ENGINE',      level: 5, icon: '⚙️' },
+  { name: 'Transmission',     nameEs: 'Transmisión',             desc: 'Fluid, filter, inspection',         descEs: 'Fluido, filtro, inspección',             price: '$129.99+', category: 'DRIVETRAIN',  level: 4, icon: '🔩' },
+  { name: 'Paint & Restore',  nameEs: 'Pintura y Restauración',  desc: 'Scratch repair, restoration',       descEs: 'Reparación de raspaduras, restauración', price: 'CALL',     category: 'BODY',        level: 3, icon: '🎨' },
+  { name: 'Insurance Claims', nameEs: 'Reclamaciones de Seguro', desc: 'All major carriers',                descEs: 'Todas las aseguradoras',                 price: 'CALL',     category: 'BODY',        level: 2, icon: '📋' },
+  { name: 'Suspension',       nameEs: 'Suspensión',              desc: 'Shocks, struts, alignment',         descEs: 'Amortiguadores, alineación',             price: 'CALL',     category: 'SUSPENSION',  level: 3, icon: '🚗' },
 ]
 
-// ── Colors ────────────────────────────────────────────────────────────────────
-const C = {
-  bg:     '#0a0a0a',
-  card:   '#111111',
-  red:    '#cc0000',
-  redDim: '#1a0000',
-  yellow: '#f5c518',
-  white:  '#ffffff',
-  muted:  '#999999',
-  border: 'rgba(204,0,0,0.25)',
+const LIVE_CARDS = [
+  { dot: '🔴', label: 'LIVE NOW', service: 'Oil Change',    detail: 'Bay 2',            borderColor: '#cc0000' },
+  { dot: '🟡', label: 'QUEUED',   service: 'Brake Service', detail: 'Est. 45min',       borderColor: '#f5c518' },
+  { dot: '✅', label: 'DONE',     service: 'Tire Rotation', detail: 'Ready for pickup', borderColor: '#4ade80' },
+]
+
+const TIMES = ['8:00 AM','9:00 AM','10:00 AM','11:00 AM','12:00 PM','1:00 PM','2:00 PM','3:00 PM','4:00 PM','5:00 PM']
+
+const labelSt: React.CSSProperties = {
+  display: 'block',
+  fontFamily: "'IBM Plex Mono', monospace",
+  fontSize: '11px',
+  color: '#555',
+  letterSpacing: '0.1em',
+  textTransform: 'uppercase',
+  marginBottom: '6px',
+}
+
+// ── Inline grid styles (production-safe, never lost in CSS build) ─────────────
+const GRID = {
+  heroSplit: {
+    display: 'grid',
+    gridTemplateColumns: 'minmax(0, 1fr) 420px',
+    gap: '3rem',
+    alignItems: 'center',
+    maxWidth: '1100px',
+    margin: '0 auto',
+    width: '100%',
+  } as React.CSSProperties,
+  serviceGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))',
+    gap: '1.25rem',
+  } as React.CSSProperties,
+  bookingSplit: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 340px',
+    gap: '3rem',
+    alignItems: 'start',
+  } as React.CSSProperties,
+  trustBar: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(4, 1fr)',
+    maxWidth: '1100px',
+    margin: '0 auto',
+  } as React.CSSProperties,
 }
 
 export default function PopCarPage() {
   const [lang, setLang] = useState<Lang>('en')
-  const [modalOpen, setModalOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [specials, setSpecials] = useState('')
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [step, setStep] = useState(1)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [confirmCode, setConfirmCode] = useState('')
+  const [form, setForm] = useState({
+    name: '', phone: '', email: '',
+    year: '', make: '', model: '', mileage: '',
+    service: '', date: '', time: '', notes: '',
+  })
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 40)
     window.addEventListener('scroll', onScroll)
-    return () => window.removeEventListener('scroll', onScroll)
+
+    supabase.from('venue_status').select('specials_text').eq('client_slug', 'popcar').single()
+      .then(({ data }) => { if (data?.specials_text) setSpecials(data.specials_text) })
+
+    const channel = supabase.channel('popcar-venue')
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'venue_status', filter: 'client_slug=eq.popcar' },
+        ({ new: next }) => setSpecials((next as { specials_text: string }).specials_text || ''))
+      .subscribe()
+
+    return () => {
+      window.removeEventListener('scroll', onScroll)
+      supabase.removeChannel(channel)
+    }
   }, [])
 
+  const f = (k: keyof typeof form, v: string) => setForm(prev => ({ ...prev, [k]: v }))
+  const scrollToBook = () => document.getElementById('book')?.scrollIntoView({ behavior: 'smooth' })
+
+  const submitForm = async () => {
+    setSubmitting(true)
+    try {
+      const res = await fetch('/api/appointments', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...form }),
+      })
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      setConfirmCode(data.confirmationCode ?? `PC-${Date.now()}`)
+      setSubmitted(true)
+    } catch {
+      alert(t('Error submitting. Please call (910) 834-3607.', 'Error al enviar. Llama al (910) 834-3607.', lang))
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const resetForm = () => {
+    setSubmitted(false)
+    setStep(1)
+    setForm({ name:'', phone:'', email:'', year:'', make:'', model:'', mileage:'', service:'', date:'', time:'', notes:'' })
+  }
+
   return (
-    <LangContext.Provider value={{ lang, setLang }}>
-      {/* ── NAV ── */}
+    <>
+      {/* ══ NAV ══════════════════════════════════════════════════════════════ */}
       <nav style={{
-        position: 'sticky', top: 0, zIndex: 100, width: '100%',
+        position: 'sticky', top: 0, zIndex: 100,
         background: scrolled ? 'rgba(10,10,10,0.97)' : '#0a0a0a',
-        borderBottom: `1px solid ${C.red}`,
+        borderBottom: '2px solid #cc0000',
         backdropFilter: scrolled ? 'blur(12px)' : 'none',
         transition: 'background 0.3s',
       }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '60px' }}>
-          {/* Brand */}
-          <a href="/" style={{ textDecoration: 'none', display: 'flex', flexDirection: 'column', lineHeight: 1.1 }}>
-            <span style={{ fontSize: '1.15rem', fontWeight: 900, color: C.red, letterSpacing: '0.05em' }}>POP CAR</span>
-            <span style={{ fontSize: '0.6rem', fontWeight: 700, color: C.yellow, letterSpacing: '0.2em', textTransform: 'uppercase' }}>Auto Center</span>
+        <div style={{ maxWidth: '1100px', margin: '0 auto', padding: '0 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '64px' }}>
+          <a href="/" style={{ textDecoration: 'none' }}>
+            <span style={{ fontFamily: "'Black Han Sans', sans-serif", fontSize: '24px', color: '#cc0000', letterSpacing: '0.03em' }}>
+              🔧 POP CAR
+            </span>
           </a>
 
           {/* Desktop links */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
-            <a href="#services" style={{ color: C.muted, textDecoration: 'none', fontSize: '0.82rem', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
+          <div className="desktop-nav">
+            <a href="#services" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '14px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#888', textDecoration: 'none' }}>
               {t('Services', 'Servicios', lang)}
             </a>
-            <button
-              onClick={() => setModalOpen(true)}
-              style={{ background: C.red, color: C.white, border: 'none', borderRadius: '6px', padding: '0.45rem 1.1rem', fontSize: '0.8rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', cursor: 'pointer' }}
-            >
-              {t('Book', 'Cita', lang)}
+            <button className="btn-pit-stop" onClick={scrollToBook}>
+              {t('BOOK PIT STOP', 'RESERVAR SERVICIO', lang)}
             </button>
+            <a href="#contact" style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '14px', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase', color: '#888', textDecoration: 'none' }}>
+              {t('Contact', 'Contacto', lang)}
+            </a>
             {/* EN/ES toggle */}
-            <div style={{ display: 'flex', borderRadius: '4px', overflow: 'hidden', border: '1px solid rgba(255,255,255,0.15)', fontSize: '0.7rem', fontWeight: 700 }}>
-              <button onClick={() => setLang('en')} style={{ padding: '4px 10px', background: lang === 'en' ? C.yellow : 'transparent', color: lang === 'en' ? '#0a0a0a' : C.muted, border: 'none', cursor: 'pointer', letterSpacing: '0.05em' }}>EN</button>
-              <button onClick={() => setLang('es')} style={{ padding: '4px 10px', background: lang === 'es' ? C.yellow : 'transparent', color: lang === 'es' ? '#0a0a0a' : C.muted, border: 'none', cursor: 'pointer', letterSpacing: '0.05em' }}>ES</button>
+            <div style={{ display: 'flex', border: '1px solid rgba(255,255,255,0.12)', overflow: 'hidden' }}>
+              {(['en','es'] as Lang[]).map(l => (
+                <button key={l} onClick={() => setLang(l)} style={{
+                  padding: '4px 12px',
+                  background: lang === l ? '#f5c518' : 'transparent',
+                  color: lang === l ? '#0a0a0a' : '#666',
+                  border: 'none', cursor: 'pointer',
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: '11px', fontWeight: 700,
+                  letterSpacing: '0.05em', textTransform: 'uppercase',
+                  transition: 'all 0.15s',
+                }}>{l.toUpperCase()}</button>
+              ))}
             </div>
           </div>
-        </div>
-      </nav>
 
-      {/* ── LIVE STATUS BAR ── */}
-      <div style={{ background: C.redDim, borderBottom: `1px solid ${C.border}`, padding: '0.5rem 1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem' }}>
-        <LiveStatusBadge clientSlug="popcar" />
-        <span style={{ fontSize: '0.72rem', color: C.muted, letterSpacing: '0.06em' }}>
-          {t('Mon–Fri 8am–6pm · Sat 8am–4pm · Sun Closed', 'Lun–Vie 8am–6pm · Sáb 8am–4pm · Dom Cerrado', lang)}
-        </span>
-      </div>
-
-      {/* ── HERO ── */}
-      <section style={{ background: C.bg, padding: '5rem 1.5rem 4rem', textAlign: 'center', borderBottom: `1px solid ${C.border}` }}>
-        <div style={{ maxWidth: '720px', margin: '0 auto' }}>
-          <p style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: C.red, marginBottom: '1rem' }}>
-            {t('Wilmington, NC · Since 2010', 'Wilmington, NC · Desde 2010', lang)}
-          </p>
-          <h1 style={{ fontSize: 'clamp(2.6rem, 7vw, 5rem)', fontWeight: 900, lineHeight: 1, letterSpacing: '-0.02em', color: C.white, textTransform: 'uppercase', marginBottom: '0.5rem' }}>
-            <span style={{ color: C.red }}>POP CAR</span>
-          </h1>
-          <h2 style={{ fontSize: 'clamp(1rem, 3vw, 1.5rem)', fontWeight: 700, color: C.yellow, letterSpacing: '0.15em', textTransform: 'uppercase', marginBottom: '1.25rem' }}>
-            {t('Auto Center', 'Centro Automotriz', lang)}
-          </h2>
-          <p style={{ fontSize: '1rem', color: C.muted, marginBottom: '0.5rem' }}>
-            {t('Full Service Auto Repair · 1301 Dawson St · Wilmington NC', 'Centro de Servicio Automotriz Completo · 1301 Dawson St', lang)}
-          </p>
-
-          {/* Big phone */}
-          <a href="tel:9108343607" style={{ display: 'block', fontSize: 'clamp(1.8rem, 5vw, 2.8rem)', fontWeight: 900, color: C.yellow, textDecoration: 'none', margin: '1.5rem 0', letterSpacing: '0.04em' }}>
-            (910) 834-3607
-          </a>
-          <p style={{ fontSize: '0.75rem', color: C.muted, marginBottom: '2rem' }}>
-            {t('Tap to call · We confirm within 2 hours', 'Toca para llamar · Confirmamos en 2 horas', lang)}
-          </p>
-
-          {/* CTAs */}
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-            <button
-              onClick={() => setModalOpen(true)}
-              style={{ background: C.red, color: C.white, border: 'none', borderRadius: '8px', padding: '0.9rem 2.2rem', fontSize: '0.9rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', boxShadow: '0 4px 20px rgba(204,0,0,0.4)' }}
-            >
-              {t('Book an Appointment', 'Reservar Cita', lang)}
-            </button>
-            <a
-              href="tel:9108343607"
-              style={{ background: C.yellow, color: '#0a0a0a', borderRadius: '8px', padding: '0.9rem 2.2rem', fontSize: '0.9rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', textDecoration: 'none', display: 'inline-block' }}
-            >
-              {t('Call Now', 'Llamar Ahora', lang)}
-            </a>
-          </div>
-
-          {/* Specials */}
-          <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'center' }}>
-            <SpecialsBanner clientSlug="popcar" accentColor={C.red} />
-          </div>
-        </div>
-      </section>
-
-      {/* ── SERVICES GRID ── */}
-      <section id="services" style={{ padding: '5rem 1.5rem', background: '#0d0d0d' }}>
-        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
-          <p style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: C.red, textAlign: 'center', marginBottom: '0.5rem' }}>
-            {t('What We Do', 'Lo Que Hacemos', lang)}
-          </p>
-          <h2 style={{ fontSize: 'clamp(1.8rem, 4vw, 2.8rem)', fontWeight: 900, textAlign: 'center', textTransform: 'uppercase', color: C.white, marginBottom: '3rem', letterSpacing: '-0.01em' }}>
-            {t('Our Services', 'Nuestros Servicios', lang)}
-          </h2>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '1rem' }}>
-            {SERVICES.map(svc => (
-              <div
-                key={svc.en}
-                style={{ background: C.redDim, border: `1px solid ${C.border}`, borderRadius: '10px', padding: '1.5rem', cursor: 'default', transition: 'border-color 0.2s, transform 0.2s' }}
-                onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = C.yellow; (e.currentTarget as HTMLDivElement).style.transform = 'scale(1.02)' }}
-                onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = C.border; (e.currentTarget as HTMLDivElement).style.transform = 'scale(1)' }}
-              >
-                <div style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>{svc.icon}</div>
-                <h3 style={{ fontWeight: 800, fontSize: '0.95rem', color: C.white, marginBottom: '0.35rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  {lang === 'es' ? svc.es : svc.en}
-                </h3>
-                <p style={{ fontSize: '0.78rem', color: C.muted, lineHeight: 1.5 }}>
-                  {lang === 'es' ? svc.desc_es : svc.desc_en}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── APPOINTMENT CTA ── */}
-      <section style={{ padding: '4rem 1.5rem', background: C.redDim, borderTop: `1px solid ${C.border}`, borderBottom: `1px solid ${C.border}`, textAlign: 'center' }}>
-        <div style={{ maxWidth: '560px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: 'clamp(1.6rem, 4vw, 2.2rem)', fontWeight: 900, textTransform: 'uppercase', color: C.white, letterSpacing: '-0.01em', marginBottom: '0.75rem' }}>
-            {t('Book Your Appointment', 'Reserva tu Cita', lang)}
-          </h2>
-          <p style={{ color: C.muted, fontSize: '0.9rem', marginBottom: '2rem' }}>
-            {t("We'll confirm within 2 hours · Mon–Fri 8am–6pm · Sat 8am–4pm", 'Confirmamos en 2 horas · Lun–Vie 8am–6pm · Sáb 8am–4pm', lang)}
-          </p>
+          {/* Mobile hamburger */}
           <button
-            onClick={() => setModalOpen(true)}
-            style={{ background: C.red, color: C.white, border: 'none', borderRadius: '8px', padding: '1rem 2.5rem', fontSize: '1rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer', boxShadow: '0 4px 24px rgba(204,0,0,0.4)' }}
+            className="mobile-menu-btn"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            style={{ background: 'transparent', border: 'none', color: '#cc0000', fontSize: '1.5rem', cursor: 'pointer', lineHeight: 1 }}
           >
-            {t('Book Now', 'Reservar Ahora', lang)}
+            {mobileMenuOpen ? '✕' : '☰'}
           </button>
         </div>
-      </section>
 
-      {/* ── WHY US ── */}
-      <section style={{ padding: '5rem 1.5rem', background: C.bg }}>
-        <div style={{ maxWidth: '900px', margin: '0 auto', textAlign: 'center' }}>
-          <p style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: C.red, marginBottom: '0.5rem' }}>
-            {t('Why Pop Car', 'Por Qué Pop Car', lang)}
-          </p>
-          <h2 style={{ fontSize: 'clamp(1.6rem, 4vw, 2.2rem)', fontWeight: 900, textTransform: 'uppercase', color: C.white, marginBottom: '3rem', letterSpacing: '-0.01em' }}>
-            {t('Trusted by Wilmington', 'La Confianza de Wilmington', lang)}
-          </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.5rem' }}>
-            {[
-              { icon: '🏆', title_en: '10.4K Followers', title_es: '10.4K Seguidores', body_en: 'Wilmington\'s most followed auto shop on Instagram.', body_es: 'El taller automotriz más seguido de Wilmington en Instagram.' },
-              { icon: '🔧', title_en: 'Full Service Shop', title_es: 'Taller Completo', body_en: 'From oil changes to engine rebuilds — one shop, all repairs.', body_es: 'Desde cambios de aceite hasta reconstrucción de motores.' },
-              { icon: '🌎', title_en: 'Bilingual Service', title_es: 'Servicio en Español', body_en: 'Spanish and English — we speak your language.', body_es: 'Español e inglés — hablamos tu idioma.' },
-            ].map(card => (
-              <div key={card.icon} style={{ background: C.redDim, border: `1px solid ${C.border}`, borderRadius: '12px', padding: '2rem 1.5rem' }}>
-                <div style={{ fontSize: '2rem', marginBottom: '0.75rem' }}>{card.icon}</div>
-                <h3 style={{ fontWeight: 800, fontSize: '1rem', color: C.yellow, marginBottom: '0.5rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                  {lang === 'es' ? card.title_es : card.title_en}
-                </h3>
-                <p style={{ fontSize: '0.82rem', color: C.muted, lineHeight: 1.5 }}>
-                  {lang === 'es' ? card.body_es : card.body_en}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── REVIEWS ── */}
-      <section style={{ padding: '4rem 1.5rem', background: '#0d0d0d', borderTop: `1px solid ${C.border}`, textAlign: 'center' }}>
-        <div style={{ maxWidth: '600px', margin: '0 auto' }}>
-          <div style={{ fontSize: '1.75rem', marginBottom: '0.5rem' }}>⭐⭐⭐⭐⭐</div>
-          <p style={{ fontSize: '1.3rem', fontWeight: 800, color: C.white, marginBottom: '0.25rem' }}>4.8 {t('stars on Google', 'estrellas en Google', lang)}</p>
-          <p style={{ color: C.muted, fontSize: '0.85rem', marginBottom: '1.75rem' }}>
-            {t('Hundreds of satisfied customers in Wilmington and beyond.', 'Cientos de clientes satisfechos en Wilmington y más allá.', lang)}
-          </p>
-          <a
-            href="https://www.google.com/maps/search/Pop+Car+Auto+Center+Wilmington+NC"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ display: 'inline-block', background: C.yellow, color: '#0a0a0a', borderRadius: '8px', padding: '0.75rem 2rem', fontSize: '0.85rem', fontWeight: 800, letterSpacing: '0.06em', textTransform: 'uppercase', textDecoration: 'none' }}
-          >
-            {t('Leave a Review', 'Dejar una Reseña', lang)}
-          </a>
-        </div>
-      </section>
-
-      {/* ── CONTACT + MAP ── */}
-      <section id="contact" style={{ padding: '5rem 1.5rem', background: C.bg, borderTop: `1px solid ${C.border}` }}>
-        <div style={{ maxWidth: '1000px', margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '3rem', alignItems: 'start' }}>
-          <div>
-            <p style={{ fontSize: '0.7rem', fontWeight: 700, letterSpacing: '0.3em', textTransform: 'uppercase', color: C.red, marginBottom: '0.5rem' }}>
-              {t('Find Us', 'Encuéntranos', lang)}
-            </p>
-            <h2 style={{ fontSize: '2rem', fontWeight: 900, color: C.white, textTransform: 'uppercase', marginBottom: '2rem' }}>
+        {mobileMenuOpen && (
+          <div style={{ background: '#111', borderTop: '1px solid #cc0000', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+            <a href="#services" onClick={() => setMobileMenuOpen(false)} style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#888', textDecoration: 'none' }}>
+              {t('Services', 'Servicios', lang)}
+            </a>
+            <button onClick={() => { setMobileMenuOpen(false); scrollToBook() }} style={{ background: '#cc0000', color: '#fff', border: '2px solid #f5c518', padding: '10px', fontFamily: "'Barlow Condensed', sans-serif", fontSize: '15px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>
+              {t('BOOK PIT STOP', 'RESERVAR SERVICIO', lang)}
+            </button>
+            <a href="#contact" onClick={() => setMobileMenuOpen(false)} style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '16px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#888', textDecoration: 'none' }}>
               {t('Contact', 'Contacto', lang)}
-            </h2>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            </a>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {(['en','es'] as Lang[]).map(l => (
+                <button key={l} onClick={() => setLang(l)} style={{
+                  flex: 1, padding: '8px',
+                  background: lang === l ? '#f5c518' : '#1a1a1a',
+                  color: lang === l ? '#0a0a0a' : '#666',
+                  border: '1px solid #333', cursor: 'pointer',
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: '12px', fontWeight: 700,
+                }}>{l.toUpperCase()}</button>
+              ))}
+            </div>
+          </div>
+        )}
+      </nav>
+
+      {/* ══ SPECIALS BANNER ══════════════════════════════════════════════════ */}
+      {specials && (
+        <div style={{ background: '#f5c518', color: '#0a0a0a', textAlign: 'center', padding: '10px 24px', fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', fontFamily: "'IBM Plex Mono', monospace" }}>
+          🔧 {specials}
+        </div>
+      )}
+
+      {/* ══ HERO — car background baked in inline ════════════════════════════ */}
+      <section style={{
+        minHeight: '100vh',
+        background: `
+          linear-gradient(
+            to right,
+            rgba(10,10,10,0.92) 0%,
+            rgba(10,10,10,0.75) 45%,
+            rgba(10,10,10,0.35) 100%
+          ),
+          url('/ref/car-hero.jpg') center right / cover no-repeat
+        `,
+        display: 'flex',
+        alignItems: 'center',
+        padding: '5rem 1.5rem',
+        borderBottom: '2px solid #cc0000',
+        boxSizing: 'border-box',
+        position: 'relative',
+        overflow: 'hidden',
+      }}>
+        {/* Scanline overlay */}
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          backgroundImage: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(204,0,0,0.025) 2px, rgba(204,0,0,0.025) 4px)',
+          zIndex: 1,
+        }} />
+
+        <div style={{ ...GRID.heroSplit, position: 'relative', zIndex: 2 }}>
+          {/* LEFT */}
+          <div>
+            <div style={{
+              display: 'inline-block',
+              border: '1px solid #f5c518',
+              padding: '4px 14px',
+              marginBottom: '2rem',
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: '12px',
+              color: '#f5c518',
+              letterSpacing: '0.12em',
+            }}>
+              [ WILMINGTON NC · EST. 2020 ]
+            </div>
+
+            <div>
               {[
-                { icon: '📍', label_en: 'Address', label_es: 'Dirección', val: '1301 Dawson Street\nWilmington, NC 28401' },
-                { icon: '📞', label_en: 'Phone', label_es: 'Teléfono', val: '(910) 834-3607', href: 'tel:9108343607' },
-                { icon: '✉️', label_en: 'Email', label_es: 'Correo', val: 'popcarllc@gmail.com', href: 'mailto:popcarllc@gmail.com' },
-                { icon: '🕐', label_en: 'Hours', label_es: 'Horario', val_en: 'Mon–Fri 8am–6pm\nSat 8am–4pm · Sun Closed', val_es: 'Lun–Vie 8am–6pm\nSáb 8am–4pm · Dom Cerrado' },
-              ].map(item => (
-                <div key={item.icon} style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start' }}>
-                  <span style={{ fontSize: '1.2rem', marginTop: '2px' }}>{item.icon}</span>
-                  <div>
-                    <p style={{ fontSize: '0.65rem', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: C.red, marginBottom: '2px' }}>
-                      {lang === 'es' ? item.label_es : item.label_en}
-                    </p>
-                    {item.href ? (
-                      <a href={item.href} style={{ fontSize: '0.9rem', color: C.white, textDecoration: 'none' }}>
-                        {item.val}
-                      </a>
-                    ) : (
-                      <p style={{ fontSize: '0.9rem', color: C.white, whiteSpace: 'pre-line' }}>
-                        {lang === 'es' && item.val_es ? item.val_es : (item.val_en ?? item.val)}
-                      </p>
-                    )}
-                  </div>
+                { text: 'POP CAR', color: '#f5c518', delay: '0s' },
+                { text: 'AUTO',    color: '#ffffff', delay: '0.15s' },
+                { text: 'CENTER',  color: '#cc0000', delay: '0.30s' },
+              ].map(line => (
+                <div key={line.text} style={{
+                  fontFamily: "'Black Han Sans', sans-serif",
+                  fontSize: 'clamp(56px, 8vw, 96px)',
+                  color: line.color,
+                  lineHeight: 0.95,
+                  animation: 'slideInLeft 0.5s ease both',
+                  animationDelay: line.delay,
+                }}>
+                  {line.text}
                 </div>
               ))}
             </div>
-            <div style={{ marginTop: '2rem' }}>
-              <button
-                onClick={() => setModalOpen(true)}
-                style={{ background: C.red, color: C.white, border: 'none', borderRadius: '8px', padding: '0.85rem 2rem', fontSize: '0.85rem', fontWeight: 800, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}
-              >
-                {t('Book Appointment', 'Reservar Cita', lang)}
+
+            <p style={{
+              fontFamily: "'Barlow Condensed', sans-serif",
+              fontSize: '20px',
+              color: '#ccc',
+              maxWidth: '480px',
+              margin: '1.75rem 0 2rem',
+              lineHeight: 1.45,
+              animation: 'fadeInUp 0.5s ease both',
+              animationDelay: '0.45s',
+            }}>
+              {t(
+                "Full-service auto repair. Wilmington's most trusted shop. We fix it right — the first time.",
+                'Servicio automotriz completo. El taller de más confianza en Wilmington. Lo arreglamos bien — desde la primera vez.',
+                lang
+              )}
+            </p>
+
+            <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', marginBottom: '2rem', animation: 'fadeInUp 0.5s ease both', animationDelay: '0.6s' }}>
+              <button className="btn-hero-primary" onClick={scrollToBook}>
+                ⚡ {t('BOOK PIT STOP', 'RESERVAR SERVICIO', lang)}
               </button>
+              <a href="tel:9108343607" className="btn-hero-secondary">
+                📞 (910) 834-3607
+              </a>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', animation: 'fadeInUp 0.5s ease both', animationDelay: '0.75s' }}>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '10px', color: '#555', letterSpacing: '0.15em', marginBottom: '6px', width: '100%' }}>
+                ▓▓▓▓▓▓▓▓▓▓ 100% SATISFACTION
+              </div>
+              {[t('10+ YRS','10+ AÑOS',lang), t('ALL MAKES','TODAS LAS MARCAS',lang), t('FREE DIAG*','DIAG. GRATIS*',lang)].map(stat => (
+                <div key={stat} style={{
+                  fontFamily: "'IBM Plex Mono', monospace",
+                  fontSize: '11px', color: '#555',
+                  border: '1px solid #222',
+                  padding: '8px 12px',
+                  letterSpacing: '0.06em',
+                }}>
+                  {stat}
+                </div>
+              ))}
             </div>
           </div>
 
-          {/* Google Maps embed */}
-          <div style={{ borderRadius: '12px', overflow: 'hidden', border: `1px solid ${C.border}` }}>
-            <iframe
-              title="Pop Car Auto Center location"
-              width="100%"
-              height="340"
-              style={{ border: 0, display: 'block' }}
-              loading="lazy"
-              allowFullScreen
-              referrerPolicy="no-referrer-when-downgrade"
-              src="https://maps.google.com/maps?q=1301+Dawson+Street+Wilmington+NC+28401&output=embed"
-            />
+          {/* RIGHT — live shop dashboard */}
+          <div className="hero-cards" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', position: 'relative', zIndex: 2 }}>
+            {LIVE_CARDS.map((card, i) => (
+              <div key={i} style={{
+                background: 'rgba(17,17,17,0.92)',
+                border: '2px solid #222',
+                borderLeft: `4px solid ${card.borderColor}`,
+                padding: '16px',
+                fontFamily: "'IBM Plex Mono', monospace",
+                fontSize: '12px',
+                animation: 'fadeInUp 0.4s ease both',
+                animationDelay: `${0.2 + i * 0.15}s`,
+                backdropFilter: 'blur(8px)',
+              }}>
+                <div style={{ color: '#555', marginBottom: '4px', letterSpacing: '0.08em', fontSize: '10px' }}>
+                  {card.dot} {card.label}
+                </div>
+                <div style={{ color: '#fff', fontWeight: 700, fontSize: '14px', letterSpacing: '0.03em' }}>{card.service}</div>
+                <div style={{ color: '#555', marginTop: '3px', fontSize: '11px' }}>{card.detail}</div>
+              </div>
+            ))}
+            <div style={{
+              fontFamily: "'IBM Plex Mono', monospace",
+              fontSize: '10px', color: '#2a2a2a',
+              textAlign: 'center', marginTop: '0.25rem',
+              letterSpacing: '0.1em',
+            }}>
+              ▓ LIVE SHOP STATUS ▓
+            </div>
           </div>
         </div>
       </section>
 
-      {/* ── FOOTER ── */}
-      <footer style={{ background: '#050505', borderTop: `1px solid ${C.border}`, padding: '2rem 1.5rem', textAlign: 'center' }}>
-        <p style={{ fontSize: '0.78rem', fontWeight: 700, color: C.white, marginBottom: '0.25rem', letterSpacing: '0.06em' }}>
-          Pop Car Auto Center · 1301 Dawson St · (910) 834-3607
-        </p>
-        <p style={{ fontSize: '0.7rem', color: C.muted, marginBottom: '0.75rem' }}>
-          {t('Powered by BlueTubeTV · Blue Ring Holdings LLC', 'Desarrollado por BlueTubeTV · Blue Ring Holdings LLC', lang)}
-        </p>
-        <a
-          href="https://www.instagram.com/popcarauto"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ fontSize: '0.75rem', color: C.red, textDecoration: 'none', letterSpacing: '0.05em' }}
-        >
-          @popcarauto · 10.4K Followers
-        </a>
-      </footer>
+      {/* ══ SERVICES ═════════════════════════════════════════════════════════ */}
+      <section id="services" style={{ background: '#0a0a0a', padding: '5rem 1.5rem', borderBottom: '2px solid #cc0000' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+            <div style={{ width: '100%', height: '2px', background: '#cc0000', marginBottom: '1.25rem' }} />
+            <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '13px', color: '#f5c518', letterSpacing: '0.2em', marginBottom: '1rem' }}>
+              // SERVICES //
+            </p>
+            <h2 style={{ fontFamily: "'Black Han Sans', sans-serif", fontSize: 'clamp(32px, 5vw, 56px)', color: '#fff', textTransform: 'uppercase', marginBottom: '0.75rem', letterSpacing: '0.02em' }}>
+              {t('SELECT YOUR SERVICE', 'SELECCIONA TU SERVICIO', lang)}
+            </h2>
+            <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', color: '#444', letterSpacing: '0.05em' }}>
+              {t('10 services available · All makes & models · Insurance accepted', '10 servicios disponibles · Todas las marcas · Seguros aceptados', lang)}
+            </p>
+          </div>
 
-      {/* ── APPOINTMENT MODAL ── */}
-      <AppointmentModal open={modalOpen} onClose={() => setModalOpen(false)} lang={lang} />
-    </LangContext.Provider>
+          <div style={GRID.serviceGrid}>
+            {SERVICES.map(svc => (
+              <div key={svc.name} style={{
+                background: '#111',
+                border: '1px solid #1a1a1a',
+                padding: '20px',
+                display: 'flex',
+                flexDirection: 'column',
+                transition: 'border-color 0.2s',
+              }}>
+                <div style={{ marginBottom: '10px' }}>
+                  <span style={{
+                    background: '#cc0000', color: '#fff',
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontSize: '10px', fontWeight: 700,
+                    padding: '3px 8px', letterSpacing: '0.1em',
+                    textTransform: 'uppercase',
+                  }}>
+                    {svc.category}
+                  </span>
+                </div>
+                <div style={{ fontSize: '1.5rem', marginBottom: '8px' }}>{svc.icon}</div>
+                <h3 style={{ fontFamily: "'Black Han Sans', sans-serif", fontSize: '22px', color: '#fff', marginBottom: '6px', letterSpacing: '0.02em' }}>
+                  {lang === 'es' ? svc.nameEs : svc.name}
+                </h3>
+                <div style={{ width: '100%', height: '1px', background: '#1a1a1a', marginBottom: '8px' }} />
+                <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '14px', color: '#666', marginBottom: '12px', lineHeight: 1.4, flexGrow: 1 }}>
+                  {lang === 'es' ? svc.descEs : svc.desc}
+                </p>
+                <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '13px', color: '#f5c518', marginBottom: '10px', fontWeight: 700 }}>
+                  {svc.price === 'CALL'
+                    ? t('PRICE: CALL FOR QUOTE', 'PRECIO: LLAMAR', lang)
+                    : svc.price === 'FREE*'
+                    ? 'PRICE: FREE*'
+                    : `PRICE: ${svc.price}`}
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+                  <div style={{ flex: 1, height: '4px', background: '#1a1a1a' }}>
+                    <div style={{ width: `${svc.level * 20}%`, height: '100%', background: '#cc0000' }} />
+                  </div>
+                  <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '10px', color: '#444', whiteSpace: 'nowrap' }}>
+                    LVL {svc.level}
+                  </span>
+                </div>
+                <button
+                  onClick={scrollToBook}
+                  style={{
+                    background: 'transparent', color: '#666',
+                    border: '1px solid #2a2a2a',
+                    padding: '8px 14px',
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    fontSize: '11px', fontWeight: 700,
+                    letterSpacing: '0.1em', textTransform: 'uppercase',
+                    cursor: 'pointer', width: '100%', marginTop: 'auto',
+                    transition: 'all 0.15s',
+                  }}
+                  onMouseEnter={e => { (e.target as HTMLButtonElement).style.background = '#cc0000'; (e.target as HTMLButtonElement).style.color = '#fff'; (e.target as HTMLButtonElement).style.borderColor = '#cc0000' }}
+                  onMouseLeave={e => { (e.target as HTMLButtonElement).style.background = 'transparent'; (e.target as HTMLButtonElement).style.color = '#666'; (e.target as HTMLButtonElement).style.borderColor = '#2a2a2a' }}
+                >
+                  {t('BOOK THIS SERVICE', 'RESERVAR ESTE SERVICIO', lang)}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ══ BOOK YOUR PIT STOP ═══════════════════════════════════════════════ */}
+      <section id="book" style={{ background: '#111111', padding: '5rem 1.5rem', borderTop: '2px solid #cc0000', borderBottom: '2px solid #cc0000' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+            <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '13px', color: '#f5c518', letterSpacing: '0.2em', marginBottom: '1rem' }}>
+              // {t('BOOK YOUR PIT STOP', 'RESERVA TU SERVICIO', lang)} //
+            </p>
+            <h2 style={{ fontFamily: "'Black Han Sans', sans-serif", fontSize: 'clamp(32px, 5vw, 56px)', color: '#fff', textTransform: 'uppercase', letterSpacing: '0.02em' }}>
+              {t('SCHEDULE SERVICE', 'AGENDAR SERVICIO', lang)}
+            </h2>
+          </div>
+
+          {/* Race checkpoint progress */}
+          {!submitted && (
+            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'center', marginBottom: '3rem' }}>
+              {[
+                { n: 1, label: t('VEHICLE', 'VEHÍCULO', lang) },
+                { n: 2, label: t('SERVICE', 'SERVICIO', lang) },
+                { n: 3, label: t('CONFIRM', 'CONFIRMAR', lang) },
+              ].map((s, i) => (
+                <div key={s.n} style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                    <div style={{
+                      width: '32px', height: '32px', borderRadius: '50%',
+                      background: step >= s.n ? '#cc0000' : '#222',
+                      border: `2px solid ${step >= s.n ? '#cc0000' : '#333'}`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontFamily: "'IBM Plex Mono', monospace",
+                      fontSize: '12px', fontWeight: 700,
+                      color: step >= s.n ? '#fff' : '#444',
+                      transition: 'all 0.2s',
+                    }}>
+                      {step > s.n ? '✓' : s.n}
+                    </div>
+                    <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '10px', letterSpacing: '0.1em', color: step >= s.n ? '#fff' : '#444' }}>
+                      {s.label}
+                    </span>
+                  </div>
+                  {i < 2 && (
+                    <div style={{
+                      width: '80px', height: '2px',
+                      background: step > s.n ? '#cc0000' : 'transparent',
+                      borderTop: step > s.n ? 'none' : '2px dashed #333',
+                      marginBottom: '22px', marginLeft: '-1px', marginRight: '-1px',
+                    }} />
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div style={GRID.bookingSplit}>
+            {/* FORM */}
+            <div>
+              {submitted ? (
+                <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>✅</div>
+                  <h3 style={{ fontFamily: "'Black Han Sans', sans-serif", fontSize: '32px', color: '#fff', textTransform: 'uppercase', marginBottom: '0.5rem', letterSpacing: '0.03em' }}>
+                    {t('PIT STOP BOOKED!', '¡SERVICIO RESERVADO!', lang)}
+                  </h3>
+                  <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', color: '#555', marginBottom: '0.5rem' }}>
+                    {t('Confirmation:', 'Confirmación:', lang)}{' '}
+                    <span style={{ color: '#f5c518', fontWeight: 700 }}>{confirmCode}</span>
+                  </p>
+                  <p style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '16px', color: '#888', marginBottom: '2rem' }}>
+                    {t(`We'll call ${form.phone} within 2 hours.`, `Te llamaremos al ${form.phone} en 2 horas.`, lang)}
+                  </p>
+                  <button onClick={resetForm} style={{ background: '#cc0000', color: '#fff', border: '2px solid #f5c518', boxShadow: '3px 3px 0px #f5c518', padding: '10px 28px', fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}>
+                    {t('BOOK ANOTHER', 'RESERVAR OTRO', lang)}
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {step === 1 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div>
+                          <label style={labelSt}>{t('Full Name *', 'Nombre Completo *', lang)}</label>
+                          <input className="pc-input" required value={form.name} onChange={e => f('name', e.target.value)} placeholder={t('Your name', 'Tu nombre', lang)} />
+                        </div>
+                        <div>
+                          <label style={labelSt}>{t('Phone *', 'Teléfono *', lang)}</label>
+                          <input className="pc-input" required type="tel" value={form.phone} onChange={e => f('phone', e.target.value)} placeholder="(910) 555-0000" />
+                        </div>
+                      </div>
+                      <div>
+                        <label style={labelSt}>{t('Email', 'Correo', lang)}</label>
+                        <input className="pc-input" type="email" value={form.email} onChange={e => f('email', e.target.value)} placeholder="your@email.com" />
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
+                        <div>
+                          <label style={labelSt}>{t('Year', 'Año', lang)}</label>
+                          <input className="pc-input" type="number" min="1980" max="2025" value={form.year} onChange={e => f('year', e.target.value)} placeholder="2020" />
+                        </div>
+                        <div>
+                          <label style={labelSt}>{t('Make', 'Marca', lang)}</label>
+                          <input className="pc-input" value={form.make} onChange={e => f('make', e.target.value)} placeholder="Toyota" />
+                        </div>
+                        <div>
+                          <label style={labelSt}>{t('Model', 'Modelo', lang)}</label>
+                          <input className="pc-input" value={form.model} onChange={e => f('model', e.target.value)} placeholder="Camry" />
+                        </div>
+                      </div>
+                      <div>
+                        <label style={labelSt}>{t('Mileage (optional)', 'Kilometraje (opcional)', lang)}</label>
+                        <input className="pc-input" type="number" value={form.mileage} onChange={e => f('mileage', e.target.value)} placeholder="85000" />
+                      </div>
+                      <button
+                        onClick={() => {
+                          if (!form.name.trim() || !form.phone.trim()) {
+                            alert(t('Name and phone are required.', 'Nombre y teléfono son requeridos.', lang))
+                            return
+                          }
+                          setStep(2)
+                        }}
+                        style={{ background: '#cc0000', color: '#fff', border: '2px solid #f5c518', boxShadow: '3px 3px 0px #f5c518', padding: '14px', fontFamily: "'Barlow Condensed', sans-serif", fontSize: '18px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer', width: '100%' }}
+                      >
+                        {t('NEXT: SELECT SERVICE →', 'SIGUIENTE: SELECCIONAR SERVICIO →', lang)}
+                      </button>
+                    </div>
+                  )}
+
+                  {step === 2 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                      <div>
+                        <label style={labelSt}>{t('Service Needed *', 'Servicio Necesario *', lang)}</label>
+                        <select className="pc-input" required value={form.service} onChange={e => f('service', e.target.value)} style={{ cursor: 'pointer' }}>
+                          <option value="">{t('Select a service…', 'Seleccionar servicio…', lang)}</option>
+                          {SERVICES.map(s => (
+                            <option key={s.name} value={s.name}>{lang === 'es' ? s.nameEs : s.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                        <div>
+                          <label style={labelSt}>{t('Preferred Date', 'Fecha Preferida', lang)}</label>
+                          <input className="pc-input" type="date" value={form.date} onChange={e => f('date', e.target.value)} min={new Date().toISOString().split('T')[0]} />
+                        </div>
+                        <div>
+                          <label style={labelSt}>{t('Preferred Time', 'Hora Preferida', lang)}</label>
+                          <select className="pc-input" value={form.time} onChange={e => f('time', e.target.value)} style={{ cursor: 'pointer' }}>
+                            <option value="">{t('Select…', 'Seleccionar…', lang)}</option>
+                            {TIMES.map(tm => <option key={tm} value={tm}>{tm}</option>)}
+                          </select>
+                        </div>
+                      </div>
+                      <div>
+                        <label style={labelSt}>{t('Notes (optional)', 'Notas (opcional)', lang)}</label>
+                        <textarea className="pc-input" rows={3} value={form.notes} onChange={e => f('notes', e.target.value)} style={{ resize: 'vertical', minHeight: '80px' }} placeholder={t('Any additional details…', 'Detalles adicionales…', lang)} />
+                      </div>
+                      <div style={{ display: 'flex', gap: '1rem' }}>
+                        <button onClick={() => setStep(1)} style={{ flex: 1, background: 'transparent', color: '#666', border: '1px solid #333', padding: '12px', fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}>
+                          ← {t('BACK', 'ATRÁS', lang)}
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (!form.service) { alert(t('Please select a service.', 'Por favor selecciona un servicio.', lang)); return }
+                            setStep(3)
+                          }}
+                          style={{ flex: 3, background: '#cc0000', color: '#fff', border: '2px solid #f5c518', boxShadow: '3px 3px 0px #f5c518', padding: '12px', fontFamily: "'Barlow Condensed', sans-serif", fontSize: '18px', fontWeight: 900, letterSpacing: '0.1em', textTransform: 'uppercase', cursor: 'pointer' }}
+                        >
+                          {t('CONFIRM PIT STOP →', 'CONFIRMAR SERVICIO →', lang)}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {step === 3 && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                      <div style={{ background: '#0a0a0a', border: '2px solid #cc0000', padding: '1.5rem' }}>
+                        <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', color: '#f5c518', letterSpacing: '0.15em', marginBottom: '1.25rem', textTransform: 'uppercase' }}>
+                          // {t('BOOKING SUMMARY', 'RESUMEN DE RESERVA', lang)} //
+                        </p>
+                        {[
+                          { label: t('Name', 'Nombre', lang), val: form.name },
+                          { label: t('Phone', 'Teléfono', lang), val: form.phone },
+                          ...(form.email ? [{ label: t('Email', 'Correo', lang), val: form.email }] : []),
+                          { label: t('Vehicle', 'Vehículo', lang), val: [form.year, form.make, form.model].filter(Boolean).join(' ') || '—' },
+                          { label: t('Service', 'Servicio', lang), val: form.service },
+                          ...(form.date ? [{ label: t('Date', 'Fecha', lang), val: form.date }] : []),
+                          ...(form.time ? [{ label: t('Time', 'Hora', lang), val: form.time }] : []),
+                        ].map(row => (
+                          <div key={row.label} style={{ display: 'flex', gap: '1.25rem', marginBottom: '8px', borderBottom: '1px solid #1a1a1a', paddingBottom: '8px' }}>
+                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', color: '#444', minWidth: '72px' }}>{row.label}</span>
+                            <span style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', color: '#ddd' }}>{row.val}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', gap: '1rem' }}>
+                        <button onClick={() => setStep(2)} style={{ flex: 1, background: 'transparent', color: '#666', border: '1px solid #333', padding: '12px', fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', cursor: 'pointer' }}>
+                          ← {t('BACK', 'ATRÁS', lang)}
+                        </button>
+                        <button
+                          onClick={submitForm}
+                          disabled={submitting}
+                          style={{ flex: 3, background: submitting ? '#660000' : '#cc0000', color: '#fff', border: '2px solid #f5c518', boxShadow: '3px 3px 0px #f5c518', padding: '14px', fontFamily: "'Black Han Sans', sans-serif", fontSize: '20px', letterSpacing: '0.04em', textTransform: 'uppercase', cursor: submitting ? 'not-allowed' : 'pointer' }}
+                        >
+                          {submitting ? t('BOOKING...', 'RESERVANDO...', lang) : `✅ ${t('CONFIRM BOOKING', 'CONFIRMAR RESERVA', lang)}`}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {/* INFO PANEL */}
+            <div className="booking-panel">
+              <div style={{ background: '#0a0a0a', border: '2px solid #cc0000', boxShadow: '6px 6px 0px #f5c518', fontFamily: "'IBM Plex Mono', monospace", fontSize: '13px', position: 'sticky', top: '80px' }}>
+                <div style={{ padding: '14px 20px', borderBottom: '1px solid #1a1a1a', display: 'flex', alignItems: 'center', gap: '8px', background: '#0d0d0d' }}>
+                  <span>🔧</span>
+                  <span style={{ fontWeight: 700, color: '#fff', letterSpacing: '0.12em', textTransform: 'uppercase', fontSize: '12px' }}>SHOP INFO</span>
+                </div>
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid #1a1a1a' }}>
+                  <p style={{ color: '#888', lineHeight: 1.6 }}>1301 Dawson Street<br />Wilmington NC 28401</p>
+                </div>
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid #1a1a1a', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <a href="tel:9108343607" style={{ color: '#f5c518', textDecoration: 'none' }}>📞 (910) 834-3607</a>
+                  <a href="mailto:popcarllc@gmail.com" style={{ color: '#888', textDecoration: 'none' }}>✉ popcarllc@gmail.com</a>
+                </div>
+                <div style={{ padding: '16px 20px', borderBottom: '1px solid #1a1a1a' }}>
+                  <p style={{ color: '#f5c518', fontWeight: 700, marginBottom: '10px', letterSpacing: '0.1em', textTransform: 'uppercase', fontSize: '11px' }}>HOURS</p>
+                  {[
+                    { day: 'Mon–Fri', hrs: '8AM – 6PM', closed: false },
+                    { day: 'Saturday', hrs: '9AM – 4PM', closed: false },
+                    { day: 'Sunday', hrs: 'Closed', closed: true },
+                  ].map(row => (
+                    <div key={row.day} style={{ display: 'flex', justifyContent: 'space-between', color: row.closed ? '#cc0000' : '#777', marginBottom: '4px' }}>
+                      <span>{row.day}</span><span>{row.hrs}</span>
+                    </div>
+                  ))}
+                </div>
+                <div style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '7px' }}>
+                  {[
+                    t('All Makes & Models', 'Todas las Marcas', lang),
+                    t('Insurance Claims', 'Reclamaciones de Seguro', lang),
+                    t('Free Diagnostics*', 'Diagnóstico Gratis*', lang),
+                    t('Bilingual (EN/ES)', 'Bilingüe (EN/ES)', lang),
+                  ].map(item => (
+                    <p key={item} style={{ color: '#666', fontSize: '12px' }}>✓ {item}</p>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ══ TRUST BAR ════════════════════════════════════════════════════════ */}
+      <section style={{ background: '#0a0a0a', borderBottom: '2px solid #cc0000' }}>
+        <div style={GRID.trustBar}>
+          {[
+            { num: '10K+', label: t('INSTAGRAM',    'INSTAGRAM',    lang) },
+            { num: 'ALL',  label: t('INSURANCE',    'SEGUROS',      lang) },
+            { num: 'FREE', label: t('DIAGNOSTICS*', 'DIAGNÓSTICO*', lang) },
+            { num: '10+',  label: t('YEARS EXP',    'AÑOS EXP',     lang) },
+          ].map((stat, i) => (
+            <div key={i} style={{ padding: '3rem 1.5rem', textAlign: 'center', borderRight: i < 3 ? '1px solid #1a1a1a' : 'none' }}>
+              <div style={{ fontFamily: "'Black Han Sans', sans-serif", fontSize: '48px', color: '#f5c518', lineHeight: 1 }}>{stat.num}</div>
+              <div style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', color: '#444', letterSpacing: '0.15em', textTransform: 'uppercase', marginTop: '8px' }}>{stat.label}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ══ FOOTER ═══════════════════════════════════════════════════════════ */}
+      <footer id="contact" style={{ background: '#0a0a0a', borderTop: '2px solid #cc0000', padding: '3rem 1.5rem' }}>
+        <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '2.5rem', marginBottom: '2.5rem' }}>
+            <div>
+              <div style={{ fontFamily: "'Black Han Sans', sans-serif", fontSize: '20px', color: '#cc0000', marginBottom: '0.75rem', letterSpacing: '0.03em' }}>
+                🔧 POP CAR AUTO CENTER
+              </div>
+              <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '12px', color: '#444', lineHeight: 1.7 }}>
+                1301 Dawson Street<br />Wilmington NC 28401<br />(910) 834-3607
+              </p>
+            </div>
+            <div>
+              <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', color: '#f5c518', letterSpacing: '0.15em', marginBottom: '1rem', textTransform: 'uppercase' }}>QUICK LINKS</p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                {[
+                  { href: '#services', label: t('Services', 'Servicios', lang) },
+                  { href: '#book', label: t('Book Appointment', 'Reservar Cita', lang) },
+                  { href: '#contact', label: t('Contact', 'Contacto', lang) },
+                ].map(link => (
+                  <a key={link.href} href={link.href} style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '14px', fontWeight: 700, color: '#444', textDecoration: 'none', letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', color: '#f5c518', letterSpacing: '0.15em', marginBottom: '1rem', textTransform: 'uppercase' }}>FOLLOW US</p>
+              <a href="https://www.instagram.com/popcarauto" target="_blank" rel="noopener noreferrer" style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '13px', color: '#cc0000', textDecoration: 'none', letterSpacing: '0.04em' }}>
+                @popcarauto · 10.4K Followers
+              </a>
+            </div>
+          </div>
+          <div style={{ borderTop: '1px solid #1a1a1a', paddingTop: '1.5rem', textAlign: 'center' }}>
+            <p style={{ fontFamily: "'IBM Plex Mono', monospace", fontSize: '11px', color: '#2a2a2a', letterSpacing: '0.08em' }}>
+              © 2025 Pop Car Auto Center · Wilmington NC
+            </p>
+          </div>
+        </div>
+      </footer>
+    </>
   )
 }

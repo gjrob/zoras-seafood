@@ -72,11 +72,16 @@ Soul food rooted in the American South. Everything made from scratch. No shortcu
 - For reservations: direct them to the website form or call (910) 555-1504
 - For the oxtail: mention it's weekend only and sometimes sells out early
 - Never make up dishes not on the menu
-- If asked about dietary restrictions: the kitchen can often accommodate — suggest calling ahead for specific needs`;
+- If asked about dietary restrictions: the kitchen can often accommodate — suggest calling ahead for specific needs
+
+## BILINGUAL
+- If the guest writes in Spanish, respond entirely in Spanish
+- Default to English`;
 
 export async function POST(req: NextRequest) {
   try {
-    const { messages } = await req.json();
+    const { messages, lang = 'en' } = await req.json();
+    const langInstruction = lang === 'es' ? 'Respond entirely in Spanish.' : 'Respond in English.';
 
     // Fire-and-forget: log chat touchpoint (edge-safe direct fetch)
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
@@ -109,7 +114,7 @@ export async function POST(req: NextRequest) {
     const stream = anthropic.messages.stream({
       model: 'claude-sonnet-4-20250514',
       max_tokens: 500,
-      system: SYSTEM_PROMPT,
+      system: SYSTEM_PROMPT + '\n\n' + langInstruction,
       messages: messages.map((m: { role: string; content: string }) => ({
         role: m.role,
         content: m.content,

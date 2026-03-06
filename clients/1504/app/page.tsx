@@ -27,6 +27,7 @@ const BAR_HOURS = [
 ];
 
 export default function Page1504() {
+  const [lang, setLang] = useState<'en' | 'es'>('en');
   const [scrolled, setScrolled] = useState(false);
   const [showReservation, setShowReservation] = useState(false);
   const [menuItems, setMenuItems] = useState<any[]>([]);
@@ -53,6 +54,25 @@ export default function Page1504() {
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'Restaurant',
+            name: '1504 Resto-Bar',
+            address: {
+              '@type': 'PostalAddress',
+              streetAddress: '2206 Carolina Beach Rd',
+              addressLocality: 'Wilmington',
+              addressRegion: 'NC',
+              addressCountry: 'US',
+            },
+            telephone: '(910) 555-1504',
+            url: 'https://1504restobar.com',
+          })
+        }}
+      />
       <PageViewTracker clientSlug="1504" />
 
       {/* NAV */}
@@ -67,7 +87,12 @@ export default function Page1504() {
               onClick={() => setShowReservation(true)}
               style={{ background: 'none', border: 'none', color: 'inherit', cursor: 'pointer', fontSize: 'inherit', fontFamily: 'inherit', letterSpacing: 'inherit', padding: 0 }}
             >
-              Reserve
+              {lang === 'es' ? 'Reservar' : 'Reserve'}
+            </button>
+          </li>
+          <li>
+            <button onClick={() => setLang(l => l === 'en' ? 'es' : 'en')} style={{ background: 'none', border: '1px solid rgba(139,26,26,0.4)', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '10px', letterSpacing: '0.1em', fontFamily: 'inherit', padding: '3px 8px' }}>
+              {lang === 'en' ? 'ES' : 'EN'}
             </button>
           </li>
         </ul>

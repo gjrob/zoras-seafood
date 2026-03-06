@@ -1,0 +1,535 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loom Teleprompter — BlueTubeTV Web</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#080808;--card:#111;--gold:#c9963a;--white:#f0ece4;--muted:#555;--dim:#333;--green:#3d9970;--border:#1e1e1e;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--white);font-family:'IBM Plex Mono',monospace}
+#selector{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:28px;overflow-y:auto;transition:opacity .3s;}
+#selector h1{font-family:'Bebas Neue',sans-serif;font-size:clamp(22px,4vw,40px);letter-spacing:.1em;text-align:center;flex-shrink:0;}
+#selector h1 span{color:var(--gold)}
+.howto{background:#0d0d0d;border:1px solid #1e1e1e;padding:16px 22px;width:100%;max-width:820px;flex-shrink:0;}
+.howto-title{font-size:9px;letter-spacing:.22em;color:#444;text-transform:uppercase;margin-bottom:11px;}
+.howto-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:4px 26px;}
+.hr{font-size:11px;color:#777;line-height:1.9;}
+.hr b{color:var(--gold);font-weight:500;}
+.howto-foot{margin-top:11px;padding-top:10px;border-top:1px solid #1a1a1a;font-size:10px;color:#3a3a3a;font-style:italic;line-height:1.7;}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;width:100%;max-width:820px;flex-shrink:0;}
+@media(max-width:640px){.grid{grid-template-columns:repeat(2,1fr)}}
+.vc{background:var(--card);border:1px solid var(--border);padding:18px 16px;cursor:pointer;transition:border-color .2s,background .2s;}
+.vc:hover{border-color:var(--gold);background:#161410}
+.vn{font-family:'Bebas Neue',sans-serif;font-size:42px;color:var(--gold);line-height:1;margin-bottom:7px;}
+.vt{font-size:12px;font-weight:500;letter-spacing:.03em;margin-bottom:3px;}
+.vg{font-size:10px;color:var(--muted);letter-spacing:.07em;text-transform:uppercase;margin-bottom:5px;}
+.vk{font-size:10px;color:var(--dim);}
+.hint{font-size:10px;color:var(--dim);letter-spacing:.09em;text-align:center;flex-shrink:0;}
+#prompter{position:fixed;inset:0;display:none;flex-direction:column;}
+.tbar{display:flex;align-items:center;justify-content:space-between;padding:10px 20px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.tbar-l{display:flex;align-items:center;gap:14px;}
+.bbtn{background:none;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:11px;letter-spacing:.08em;padding:5px 12px;cursor:pointer;transition:all .2s;}
+.bbtn:hover{border-color:var(--gold);color:var(--gold)}
+.vlbl{font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase;}
+.vlbl span{color:var(--gold)}
+.pdots{display:flex;gap:5px;align-items:center;flex-wrap:wrap;max-width:300px;}
+.dot{width:7px;height:7px;background:var(--border);cursor:pointer;transition:all .25s;flex-shrink:0;}
+.dot.active{background:var(--gold)}.dot.done{background:var(--dim)}
+.ptxt{font-size:11px;color:var(--muted);letter-spacing:.06em;min-width:52px;text-align:right;}
+.carea{flex:1;display:flex;align-items:center;justify-content:center;padding:28px 40px;position:relative;overflow:hidden;cursor:pointer;}
+@media(max-width:600px){.carea{padding:20px}}
+.card{width:100%;max-width:860px;position:absolute;opacity:0;transform:translateY(24px);transition:opacity .3s ease,transform .3s ease;pointer-events:none;}
+.card.active{opacity:1;transform:translateY(0);pointer-events:auto;position:relative;}
+.card.up{opacity:0;transform:translateY(-32px)}.card.down{opacity:0;transform:translateY(32px)}
+.ctag{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--muted);margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+.ctag::before{content:'';flex:none;width:16px;height:1px;background:var(--dim);}
+.ctime{display:inline-block;border:1px solid var(--border);font-size:11px;color:var(--gold);letter-spacing:.1em;padding:3px 10px;margin-bottom:18px;}
+.ctext{font-size:clamp(17px,2.6vw,25px);font-weight:300;line-height:1.65;color:var(--white);letter-spacing:-.01em;}
+.ctext .act{display:block;margin-top:14px;font-size:clamp(12px,1.8vw,15px);color:var(--gold);font-weight:400;letter-spacing:.04em;}
+.ctext .act::before{content:'▶  '}
+.ctext .tip{display:block;margin-top:12px;font-size:clamp(11px,1.5vw,13px);color:var(--muted);font-style:italic;font-weight:300;}
+.ctext em{font-style:normal;color:var(--gold);font-weight:500;}
+.done-card{display:none;text-align:center;width:100%;max-width:500px;}
+.done-card h2{font-family:'Bebas Neue',sans-serif;font-size:clamp(52px,10vw,96px);color:var(--green);letter-spacing:.06em;margin-bottom:12px;}
+.done-card p{font-size:13px;color:var(--muted);line-height:1.8;letter-spacing:.04em;}
+.rbtn{margin-top:20px;background:none;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.1em;padding:10px 22px;cursor:pointer;transition:all .2s;}
+.rbtn:hover{border-color:var(--gold);color:var(--gold)}
+.bnav{display:flex;align-items:center;justify-content:center;gap:12px;padding:14px 20px 18px;border-top:1px solid var(--border);flex-shrink:0;}
+.khint{font-size:10px;color:var(--dim);letter-spacing:.07em;text-align:center;padding:4px 0 0;}
+.nbtn{background:none;border:1px solid var(--border);color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:12px;letter-spacing:.08em;padding:11px 26px;cursor:pointer;transition:all .2s;min-width:110px;}
+.nbtn:hover:not(:disabled){border-color:var(--white);color:var(--white)}
+.nbtn.pri{background:var(--gold);border-color:var(--gold);color:#080808;font-weight:500;}
+.nbtn.pri:hover:not(:disabled){background:#d4a84a;border-color:#d4a84a}
+.nbtn:disabled{opacity:.25;cursor:not-allowed;}
+</style>
+</head>
+<body>
+
+<div id="selector">
+  <h1>LOOM <span>TELEPROMPTER</span> &nbsp;—&nbsp; BLUETUBETV WEB</h1>
+
+  <div class="howto">
+    <div class="howto-title">How to use this teleprompter</div>
+    <div class="howto-grid">
+      <div class="hr"><b>Step 1</b> — Right-click → Open with Live Server (or double-click to open in browser)</div>
+      <div class="hr"><b>Step 2</b> — Set up your browser tabs: client's current site, your demo, overlay panel</div>
+      <div class="hr"><b>Step 3</b> — Click a video card below to load that script</div>
+      <div class="hr"><b>Step 4</b> — Start recording in Loom, then use this window to advance cards as you talk</div>
+      <div class="hr"><b>SPACE or →</b> — Advance to next card</div>
+      <div class="hr"><b>←</b> — Go back one card</div>
+      <div class="hr"><b>Click the card</b> — Also advances to next card</div>
+      <div class="hr"><b>Dots at top</b> — Click any dot to jump to that card directly</div>
+      <div class="hr"><b>ESC</b> — Return to this video selection screen</div>
+      <div class="hr"><b>Restart button</b> — Appears at end of script, resets to card 1</div>
+    </div>
+    <div class="howto-foot">
+      <span style="color:#666;font-style:normal">Gold ▶ text</span> = on-screen action to take — do it, don't read it out loud &nbsp;·&nbsp;
+      <i>Faded italic</i> = private reminder tip, never read aloud &nbsp;·&nbsp;
+      White text in quotes = your actual words to say
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="vc" onclick="go(0)">
+      <div class="vn">01</div>
+      <div class="vt">Pop Car Auto</div>
+      <div class="vg">Service businesses</div>
+      <div class="vk">9 cards · ~8 min</div>
+    </div>
+    <div class="vc" onclick="go(1)">
+      <div class="vn">02</div>
+      <div class="vt">Salt &amp; Charm</div>
+      <div class="vg">Catering / food</div>
+      <div class="vk">7 cards · ~6 min</div>
+    </div>
+    <div class="vc" onclick="go(2)">
+      <div class="vn">03</div>
+      <div class="vt">1504 Resto-Bar</div>
+      <div class="vg">Restaurants / bars</div>
+      <div class="vk">7 cards · ~6 min</div>
+    </div>
+    <div class="vc" onclick="go(3)">
+      <div class="vn">04</div>
+      <div class="vt">Kyoto Restaurant</div>
+      <div class="vg">Upscale dining</div>
+      <div class="vk">7 cards · ~6 min</div>
+    </div>
+  </div>
+  <div class="hint">CLICK A VIDEO TO LOAD SCRIPT &nbsp;·&nbsp; SPACE / ARROWS TO ADVANCE &nbsp;·&nbsp; ESC TO GO BACK</div>
+</div>
+
+<div id="prompter">
+  <div class="tbar">
+    <div class="tbar-l">
+      <button class="bbtn" onclick="back()">← VIDEOS</button>
+      <div class="vlbl">VIDEO <span id="vnum">01</span> — <span id="vname">POP CAR</span></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="pdots" id="dots"></div>
+      <div class="ptxt" id="ptxt">1 / 9</div>
+    </div>
+  </div>
+  <div class="carea" id="carea" onclick="next()">
+    <div class="done-card" id="done">
+      <h2>CUT.</h2>
+      <p>That's the Loom.<br>Stop recording now.<br>Review the last 30 seconds.<br>If the close landed — export it.</p>
+      <button class="rbtn" onclick="event.stopPropagation();restart()">↺ RESTART</button>
+    </div>
+  </div>
+  <div class="khint">SPACE / → NEXT &nbsp;·&nbsp; ← PREV &nbsp;·&nbsp; CLICK CARD TO ADVANCE</div>
+  <div class="bnav">
+    <button class="nbtn" id="pb" onclick="prev()">← PREV</button>
+    <button class="nbtn pri" id="nb" onclick="next()">NEXT →</button>
+  </div>
+</div>
+
+<script>
+const VIDS = [
+{
+  num:'01', name:'POP CAR AUTO',
+  cards:[
+    {tag:'BEFORE YOU RECORD',body:`<span class="act">Tab 1 — Pop Car's CURRENT live site</span>
+<span class="act">Tab 2 — Your Pop Car demo</span>
+<span class="act">Tab 3 — Overlay control panel</span>
+<span class="act">Cam bubble ON — face visible the whole time</span>
+<span class="tip">Breathe. Speak at 80% of your normal speed. Pause one full second before every reveal.</span>`},
+    {tag:'THE HOOK',time:'0:00 – 0:30',body:`<span class="say">[Show Pop Car's current live site]</span>
+
+"This is Pop Car's website right now. It exists. It loads. It has their phone number."
+
+<span class="act">Switch to your Pop Car demo</span>
+
+"This is what I built in <em>3 days.</em> Same business. <em>Different category entirely.</em>"
+
+<span class="tip">Don't trash their site — the owner may have built it. Let the contrast do the work.</span>`},
+    {tag:'THE DESIGN',time:'0:30 – 2:00',body:`<span class="say">[Scroll slowly through the demo]</span>
+
+"Notice the font. <em>Black Han Sans.</em> Not on any template. Designed for this shop specifically."
+
+<span class="act">Hover a service card — show the border animation</span>
+
+"See that? Every detail is intentional. This is a <em>design system built for Pop Car</em> — not a theme a thousand other shops are using."
+
+<span class="tip">Pause 1 second before each hover/click reveal.</span>`},
+    {tag:'BOOKING + CRM',time:'2:00 – 3:30',body:`<span class="act">Click BOOK PIT STOP — fill the form live</span>
+
+"Every submission <em>auto-creates a customer record.</em> Owner sees every lead from their phone."
+
+"No Calendly. No HubSpot. <em>Built in.</em> A live database they own forever."
+
+"That lead doesn't disappear into a Gmail inbox nobody checks. <em>It goes into the system.</em>"`},
+    {tag:'BILINGUAL',time:'3:30 – 4:30',body:`<span class="act">Click the ES language toggle</span>
+
+"Wilmington is <em>14% Hispanic.</em> Every competitor ignores this."
+
+"One click — full Spanish. <em>Hand-crafted. Not Google Translate.</em>"
+
+"The difference between serving 86% of the market — <em>or all of it.</em>"
+
+<span class="tip">Pause here. Let that number land.</span>`},
+    {tag:'AI CHATBOT',time:'4:30 – 5:30',body:`<span class="act">Open chatbot — type: "Do you work on Hondas?"</span>
+
+"Not a generic bot. <em>Trained on Pop Car specifically</em> — their services, prices, hours, location."
+
+"Customer at 11pm on a Sunday asks a question. It answers. <em>While the owner is asleep.</em>"
+
+"That customer books at 8am. <em>Without that — they were going to a competitor.</em>"`},
+    {tag:'LIVE OVERLAY',time:'5:30 – 6:30',body:`<span class="act">Open overlay panel — trigger it — show it appear on screen</span>
+
+"I just pushed a live notification to <em>every visitor on this site. Right now.</em>"
+
+"Flash sale. Bay just opened. Wait time update. <em>It appears on their screen in real time.</em>"
+
+"Nobody in Wilmington is doing this. <em>Nobody in most cities at this price point.</em>"`},
+    {tag:'LIVE CAMERA',time:'6:30 – 7:30',body:`<span class="act">Show camera embed or map with live camera pins</span>
+
+"Customer drops off their car. Goes to work. Opens their phone and <em>watches the bay.</em>"
+
+"Trust. Transparency. No phone call needed."
+
+"This same infrastructure powers <em>BlueTubeTV</em> — Wilmington's live civic streaming network. I didn't buy this. <em>I built it.</em>"`},
+    {tag:'THE CLOSE',time:'7:30 – 8:30',body:`<span class="say">[Look at camera. Slow down.]</span>
+
+"Three days to build. A Raleigh agency quotes <em>$8,000 and 6 weeks.</em>"
+
+"Free demo. 48 hours. <em>Real software. No templates.</em>"
+
+"Reply to this email. That's it."
+
+<span class="act">STOP RECORDING HERE</span>
+<span class="tip">Don't keep talking after the close. End it clean.</span>`}
+  ]
+},
+{
+  num:'02', name:'SALT & CHARM',
+  cards:[
+    {tag:'BEFORE YOU RECORD',body:`<span class="act">Tab 1 — eat.saltandcharm.co current site</span>
+<span class="act">Tab 2 — Your Salt &amp; Charm demo</span>
+<span class="act">Tab 3 — ROI calculator, Catering preset loaded</span>
+<span class="act">Cam bubble ON</span>
+<span class="tip">Warmer tone here. Personal business. Premium food. Refined, not flashy. Slow your voice down — this sells on feeling.</span>`},
+    {tag:'THE HOOK',time:'0:00 – 0:20',body:`<span class="say">[Show current Salt &amp; Charm site]</span>
+
+"4.96 stars. 10-year reputation. <em>Premium catering.</em> This is their website."
+
+<span class="act">Cut to your demo</span>
+
+"<em>This is what they deserve.</em>"`},
+    {tag:'THE DESIGN',time:'0:20 – 2:00',body:`<span class="say">[Scroll slowly — let the atmosphere land]</span>
+
+"Cormorant Garamond. Warm gold. Cinematic hero."
+
+"This doesn't look like a website. <em>It looks like a menu from a restaurant you'd drive an hour to get to.</em>"
+
+"That's the trust signal that books a <em>$2,000 catering event</em> — before they've read a single word."
+
+<span class="tip">Slow your voice down here. Let it breathe. This sells on feeling, not features.</span>`},
+    {tag:'BOOKING + CRM + CHATBOT',time:'2:00 – 3:45',body:`<span class="act">Fill a catering inquiry form live — show it land in the CRM</span>
+
+"Every inquiry captured. Every lead tracked. Not buried in Gmail. <em>A live database she owns.</em>"
+
+<span class="act">Open chatbot — type: "Do you do wedding catering?"</span>
+
+"24/7 assistant trained on Salt &amp; Charm specifically. Customer asks at midnight. <em>It answers.</em> While Abbye is cooking. While she's at an event. <em>The site is handling it.</em>"`},
+    {tag:'THE ROI MOMENT',time:'3:45 – 5:30',body:`<span class="act">Pull up ROI calculator — Catering preset — show it live</span>
+
+"Here's the math. One additional catering booking per month."
+
+"$800. $1,500. Whatever her average ticket is. <em>That covers $99/month and the setup in the first 60 days.</em>"
+
+"The question isn't whether $99/month is worth it."
+
+"<em>The question is: how many people are visiting her site right now and leaving without booking — because it doesn't look like the food actually tastes?</em>"
+
+<span class="tip">Pause after that last line. Don't fill the silence. Let it land.</span>`},
+    {tag:'THE DIFFERENTIATOR',time:'5:30 – 6:00',body:`<span class="say">[Look at camera]</span>
+
+"Every competitor builds you a brochure."
+
+"<em>I build you a broadcast channel</em> — booking system, CRM, bilingual AI assistant, live overlays — all running on the same infrastructure that powers <em>BlueTubeTV</em>, Wilmington's live civic media network."
+
+"<em>Nobody in this market is selling this.</em>"`},
+    {tag:'THE CLOSE',time:'6:00 – 6:30',body:`"I built this in one day from her live site."
+
+"48 hours for a version with <em>her real menu, real photos, real prices.</em> Free."
+
+"Love it — we talk numbers. Don't — keep it."
+
+"<em>Reply to this email.</em>"
+
+<span class="act">STOP RECORDING HERE</span>
+<span class="tip">Smile slightly. This is personal. Warmth closes this one.</span>`}
+  ]
+},
+{
+  num:'03', name:'1504 RESTO-BAR',
+  cards:[
+    {tag:'BEFORE YOU RECORD',body:`<span class="act">Tab 1 — 1504's current live site</span>
+<span class="act">Tab 2 — Your 1504 demo</span>
+<span class="act">Tab 3 — Overlay panel and chatbot ready</span>
+<span class="act">Cam bubble ON</span>
+<span class="tip">Restaurant owners respond to speed and revenue. Lead with the booking system and the live overlay — those are the two things they don't have and feel every weekend.</span>`},
+    {tag:'THE HOOK',time:'0:00 – 0:20',body:`<span class="say">[Show 1504's current site]</span>
+
+"Good food. Real following. <em>This is their website right now.</em>"
+
+<span class="act">Cut to your 1504 demo</span>
+
+"Same restaurant. Same menu. <em>Completely different first impression.</em>"`},
+    {tag:'THE DESIGN',time:'0:20 – 1:30',body:`<span class="say">[Scroll through — let the design breathe]</span>
+
+"Custom design system. Built for <em>this restaurant specifically.</em> Not Squarespace. Not WordPress."
+
+"The menu reads like a menu. The photos feel like you're already there."
+
+"<em>That's the difference between a visitor and a reservation.</em>"`},
+    {tag:'BOOKING + CRM',time:'1:30 – 2:30',body:`<span class="act">Click the reservation flow — fill it live</span>
+
+"Every reservation auto-enters the CRM. Owner sees who's coming, when, how many. <em>From their phone.</em>"
+
+"No OpenTable cut. No Resy fee."
+
+"<em>They own the customer relationship directly.</em>"`},
+    {tag:'BILINGUAL + CHATBOT',time:'2:30 – 3:30',body:`<span class="act">Click the ES language toggle</span>
+
+"<em>14% of Wilmington is Hispanic.</em> One click — full Spanish. No plugin. No extra charge."
+
+<span class="act">Open chatbot — type: "What time do you close on Fridays?"</span>
+
+"Customer asks at 9pm. <em>It answers.</em> They book. They show up."
+
+"<em>No staff needed.</em>"`},
+    {tag:'LIVE OVERLAY',time:'3:30 – 4:30',body:`<span class="act">Trigger a live overlay — show it appear</span>
+
+"Happy hour starts at 5. Instead of hoping they see the Instagram post — <em>I push it live to every visitor at 4:45.</em>"
+
+"'Happy hour in 15 minutes. Come in.' <em>Real time. No app. No subscription.</em>"
+
+"That's a table that would've stayed home. <em>Now it's revenue.</em>"`},
+    {tag:'DIFFERENTIATOR + CLOSE',time:'4:30 – 6:00',body:`"Every competitor builds restaurants a brochure."
+
+"<em>I build a reservation system, a CRM, a bilingual AI host, and a live broadcast channel</em> — all in one."
+
+"Running on the same infrastructure as <em>BlueTubeTV</em>, Wilmington's live civic network."
+
+"Recent work: Pop Car Auto, Salt &amp; Charm, Kyoto, Seabird, Queens. <em>I own this market.</em>"
+
+"Free demo. <em>48 hours.</em> Built with your real menu and your real brand."
+
+"Love it — we talk numbers. Don't — keep it. <em>Reply to this email.</em>"
+
+<span class="act">STOP RECORDING HERE</span>
+<span class="tip">Clean stop. No rambling. The demo closed it before you got here.</span>`}
+  ]
+},
+{
+  num:'04', name:'KYOTO',
+  cards:[
+    {tag:'BEFORE YOU RECORD',body:`<span class="act">Tab 1 — Kyoto's current live site</span>
+<span class="act">Tab 2 — Your Kyoto demo</span>
+<span class="act">Tab 3 — Overlay panel and chatbot ready</span>
+<span class="act">Cam bubble ON</span>
+<span class="tip">Kyoto is upscale. Pitch is prestige + function. Lead with how the site looks, then show it works harder than any high-end competitor. Slower delivery. More pauses.</span>`},
+    {tag:'THE HOOK',time:'0:00 – 0:25',body:`<span class="say">[Show Kyoto's current live site]</span>
+
+"Kyoto is one of the best dining experiences in Wilmington. <em>This is their website.</em>"
+
+<span class="act">Cut to your Kyoto demo</span>
+
+"<em>This is what I built.</em> Same restaurant. Same prestige."
+
+"<em>Now the site matches what's on the plate.</em>"`},
+    {tag:'THE DESIGN',time:'0:25 – 1:45',body:`<span class="say">[Scroll very slowly — let it breathe]</span>
+
+"Every element is intentional. The typography. The spacing. The imagery."
+
+"This isn't a theme. <em>This is a design system built exclusively for Kyoto.</em>"
+
+"High-end restaurants in New York and Chicago pay $15,000 for this level of design."
+
+"<em>I built this in Wilmington. For Wilmington.</em>"
+
+<span class="tip">Slow down even more here. Silence sells at this level.</span>`},
+    {tag:'RESERVATIONS + CRM',time:'1:45 – 3:00',body:`<span class="act">Click the reservation flow — fill it live and show CRM capture</span>
+
+"Every reservation enters a live CRM. Party size. Dietary notes. Contact info."
+
+"Owner sees it from their phone before the guest arrives."
+
+"No OpenTable taking a cut on every cover. <em>No third-party owning their customer list.</em>"
+
+"<em>They own every relationship. Forever.</em>"`},
+    {tag:'AI CHATBOT',time:'3:00 – 4:00',body:`<span class="act">Open chatbot — type: "Do you have a private dining room?"</span>
+
+"Trained on Kyoto specifically — menu, hours, events, specials, private dining."
+
+"Guest asks at 10pm on a Tuesday. <em>It answers like a host would.</em>"
+
+"<em>That's the experience before they walk in the door.</em>"
+
+"Sets the tone. Builds anticipation. <em>Books the table.</em>"`},
+    {tag:'LIVE OVERLAY + BILINGUAL',time:'4:00 – 5:00',body:`<span class="act">Trigger an overlay — omakase special, private event, chef's table</span>
+
+"Chef's table available tonight. Pushed live to every visitor on the site. <em>Right now.</em>"
+
+"No email blast. No social post. <em>Directly to the people already looking.</em>"
+
+<span class="act">Click the ES language toggle</span>
+
+"<em>14% of Wilmington is Hispanic.</em> One click — full Spanish. Full menu. Full experience."
+
+"<em>Nobody else in this market is offering this.</em>"`},
+    {tag:'DIFFERENTIATOR + CLOSE',time:'5:00 – 6:10',body:`<span class="say">[Look at camera. Quiet confidence.]</span>
+
+"Every competitor builds restaurants a brochure website."
+
+"<em>I build a reservation system, a live CRM, a trained AI host, bilingual support, and a real-time broadcast channel</em> — all in one."
+
+"Runs on the same infrastructure as <em>BlueTubeTV</em>, Wilmington's live civic media network."
+
+"Recent work: Pop Car Auto, Salt &amp; Charm, 1504, Seabird, Queens. <em>I own this market.</em>"
+
+"Free demo. <em>48 hours.</em> Built with Kyoto's real menu, real photography, real brand."
+
+"Love it — we talk numbers. Don't — keep it. <em>Reply to this email.</em>"
+
+<span class="act">STOP RECORDING HERE</span>
+<span class="tip">Don't smile too much — this is a prestige close. Calm, confident, quiet. The demo did the work.</span>`}
+  ]
+}
+];
+
+let vid=0,cur=0,els=[];
+
+function go(i){
+  vid=i;cur=0;
+  const v=VIDS[i];
+  document.getElementById('vnum').textContent=v.num;
+  document.getElementById('vname').textContent=v.name;
+  const dt=document.getElementById('dots');
+  dt.innerHTML='';
+  v.cards.forEach((_,j)=>{
+    const d=document.createElement('div');
+    d.className='dot'+(j===0?' active':'');
+    d.onclick=(e)=>{e.stopPropagation();jump(j)};
+    dt.appendChild(d);
+  });
+  const area=document.getElementById('carea');
+  area.querySelectorAll('.card').forEach(e=>e.remove());
+  els=[];
+  v.cards.forEach((c,j)=>{
+    const el=document.createElement('div');
+    el.className='card'+(j===0?' active':'');
+    let h='';
+    if(c.tag) h+=`<div class="ctag">${c.tag}</div>`;
+    if(c.time) h+=`<div class="ctime">${c.time}</div>`;
+    h+=`<div class="ctext">${c.body}</div>`;
+    el.innerHTML=h;
+    area.insertBefore(el,document.getElementById('done'));
+    els.push(el);
+  });
+  document.getElementById('done').style.display='none';
+  document.getElementById('selector').style.opacity='0';
+  setTimeout(()=>{
+    document.getElementById('selector').style.display='none';
+    document.getElementById('prompter').style.display='flex';
+  },300);
+  ui();
+}
+
+function ui(){
+  const tot=VIDS[vid].cards.length;
+  document.getElementById('ptxt').textContent=(cur+1)+' / '+tot;
+  const ds=document.getElementById('dots').children;
+  for(let i=0;i<ds.length;i++) ds[i].className='dot'+(i===cur?' active':i<cur?' done':'');
+  document.getElementById('pb').disabled=cur===0;
+  document.getElementById('nb').disabled=cur>tot-1;
+  document.getElementById('nb').textContent=cur===tot-1?'FINISH →':'NEXT →';
+}
+
+function jump(j){
+  if(j===cur) return;
+  const dir=j>cur?'up':'down';
+  els[cur].classList.remove('active');
+  els[cur].classList.add(dir);
+  setTimeout(()=>els[cur].classList.remove(dir),350);
+  cur=j;
+  els[cur].classList.add('active');
+  document.getElementById('done').style.display='none';
+  ui();
+}
+
+function next(){
+  const tot=VIDS[vid].cards.length;
+  if(cur>=tot) return;
+  if(cur<els.length){
+    els[cur].classList.remove('active');
+    els[cur].classList.add('up');
+    setTimeout(()=>{if(els[cur])els[cur].classList.remove('up')},350);
+  }
+  cur++;
+  if(cur>=tot){
+    document.getElementById('done').style.display='block';
+    document.getElementById('nb').disabled=true;
+  } else {
+    els[cur].classList.add('active');
+  }
+  ui();
+}
+
+function prev(){
+  if(cur<=0) return;
+  const tot=VIDS[vid].cards.length;
+  if(cur>=tot){
+    document.getElementById('done').style.display='none';
+    cur=tot-1;
+    els[cur].classList.add('active');
+    ui();return;
+  }
+  els[cur].classList.remove('active');
+  els[cur].classList.add('down');
+  setTimeout(()=>els[cur].classList.remove('down'),350);
+  cur--;
+  els[cur].classList.add('active');
+  ui();
+}
+
+function back(){
+  document.getElementById('prompter').style.display='none';
+  const s=document.getElementById('selector');
+  s.style.display='flex';s.style.opacity='1';
+}
+
+function restart(){go(vid)}
+
+document.addEventListener('keydown',e=>{
+  if(document.getElementById('prompter').style.display==='none') return;
+  if(e.key==='ArrowRight'||e.key===' '){e.preventDefault();next();}
+  if(e.key==='ArrowLeft'){e.preventDefault();prev();}
+  if(e.key==='Escape') back();
+});
+</script>
+</body>
+</html>
